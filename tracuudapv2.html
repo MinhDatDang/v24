@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🏞 Reservoir AI v4 PRO — Dự báo, Liên hồ & Báo cáo</title>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Chart.js cho biểu đồ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+  font-family:'Segoe UI',Roboto,sans-serif;
+  background:linear-gradient(135deg,#e6f3ff,#ffffff);
+  margin:0;padding:0;color:#111;
+}
+header{
+  background:#0066c4;color:white;padding:14px 20px;
+  font-size:20px;font-weight:600;
+  box-shadow:0 3px 10px rgba(0,0,0,0.25);
+}
+nav{
+  display:flex;justify-content:center;gap:8px;
+  background:#e8f0ff;padding:10px;
+}
+button.tab{
+  background:#fff;border:2px solid #0078d7;color:#0078d7;
+  border-radius:999px;padding:8px 16px;cursor:pointer;
+  font-weight:600;font-size:14px;
+  transition:0.25s;
+}
+button.tab.active{
+  background:#0078d7;color:white;
+  transform:scale(1.05);
+}
+.container{
+  max-width:1000px;margin:20px auto;background:white;
+  border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,0.12);
+  padding:20px;animation:fadeIn 0.25s;
+}
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(4px);}
+  to{opacity:1;transform:translateY(0);}
+}
+input,select{
+  padding:8px;border:1px solid #ccc;border-radius:6px;
+  width:220px;margin:4px 0;
+}
+label{font-size:14px;font-weight:600;}
+.btn-primary{
+  background:#0078d7;color:white;border:none;
+  border-radius:8px;padding:10px 16px;margin-top:10px;
+  cursor:pointer;font-size:14px;font-weight:600;
+  transition:0.25s;
+}
+.btn-primary:hover{background:#005fa3;}
+.result{
+  background:#eef7ff;border-left:5px solid #0078d7;
+  padding:12px 16px;border-radius:8px;margin-top:16px;
+  font-size:14px;
+}
+.result table{
+  width:100%;border-collapse:collapse;margin-top:8px;
+  font-size:13px;
+}
+.result th,.result td{
+  border:1px solid #c4ddff;padding:6px 8px;text-align:center;
+}
+.badge{
+  display:inline-block;padding:2px 8px;border-radius:999px;
+  font-size:11px;margin-left:4px;
+}
+.badge-safe{background:#d4f8e8;color:#097b3a;}
+.badge-warn{background:#fff6c4;color:#8a6d00;}
+.badge-high{background:#ffe0c4;color:#993c00;}
+.badge-emg{background:#ffd4d4;color:#a30000;}
+footer{
+  text-align:center;color:#555;font-size:13px;margin:20px 0;
+}
+.section-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:16px;
+}
+.card{
+  background:#f8fbff;border-radius:10px;padding:12px 14px;
+  border:1px solid #deecff;font-size:13px;
+}
+.card h3{
+  margin:0 0 6px;font-size:15px;
+}
+small{color:#555;}
+#chartContainer{
+  margin-top:18px;
+}
+canvas{max-width:100%;height:260px;}
+</style>
+</head>
+<body><button onclick="location.href='index.html'" style="position:fixed;top:10px;left:10px;z-index:9999;">⬅ Trang chính</button>
+
+<header>🏞 Reservoir AI v4 PRO — Dự báo mực nước, Liên hồ & Báo cáo PDF</header>
+
+<nav>
+  <button class="tab active" onclick="showTab('aiTab', this)">🧠 AI Dự báo</button>
+  <button class="tab" onclick="showTab('flowTab', this)">🌊 Liên hồ & Sông</button>
+  <button class="tab" onclick="showTab('reportTab', this)">📄 Báo cáo PDF / SOS</button>
+</nav>
+
+<!-- TAB 1: AI DỰ BÁO -->
+<div id="aiTab" class="container">
+  <h2>🧠 Dự báo mực nước với 3 kịch bản mưa & AI xả tối ưu</h2>
+
+  <div class="section-grid">
+    <div class="card">
+      <h3>📍 Chọn hồ chứa</h3>
+      <label>Hồ chứa:</label><br>
+      <select id="resSelect" onchange="onReservoirChange()">
+        <option value="ke_go">Hồ Kẻ Gỗ</option>
+        <option value="ngan_truoi">Hồ Ngàn Trươi</option>
+        <option value="song_rac">Hồ Sông Rác</option>
+        <option value="song_tri">Hồ Sông Trí</option>
+        <option value="thac_trang">Hồ Thác Trắng</option>
+        <option value="thuy_yen">Hồ Thủy Yên – Thủy Cam</option>
+      </select>
+      <p style="margin-top:6px;font-size:13px;">
+        MN giới hạn lũ hiện tại: <b><span id="infoLimit">34.0</span> m</b><br>
+        Mực nước cơ sở: <b><span id="infoZ0">30.5</span> m</b>
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>🌧 Thông tin đầu vào</h3>
+      <label>Lượng mưa dự kiến (mm):</label><br>
+      <input type="number" id="rain" value="120"><br>
+
+      <label>Lưu lượng vào Q<sub>in</sub> (m³/s):</label><br>
+      <input type="number" id="qin" value="220"><br>
+
+      <label>Lưu lượng xả hiện tại Q<sub>out</sub> (m³/s):</label><br>
+      <input type="number" id="qout" value="180"><br>
+
+      <button class="btn-primary" onclick="runForecast()">▶ Dự báo 3 kịch bản</button>
+    </div>
+
+    <div class="card">
+      <h3>🤖 Gợi ý xả tối ưu (AI)</h3>
+      <p>
+        Q<sub>out</sub> khuyến nghị để giữ mực nước trong vùng an toàn:
+      </p>
+      <input type="number" id="qoutOpt" readonly style="background:#eef7ff;">
+      <p style="font-size:12px;margin-top:4px;">
+        <b>Lưu ý:</b> Giá trị chỉ mang tính tham khảo, cần kết hợp quy trình vận hành liên hồ & chỉ đạo PCTT.
+      </p>
+    </div>
+  </div>
+
+  <div id="aiResult" class="result" style="display:none;"></div>
+
+  <div id="safetyResult" class="result" style="display:none;"></div>
+
+  <div id="chartContainer" style="display:none;">
+    <h3>📈 Biểu đồ mực nước 3 kịch bản</h3>
+    <canvas id="forecastChart"></canvas>
+  </div>
+</div>
+
+<!-- TAB 2: LIÊN HỒ -->
+<div id="flowTab" class="container" style="display:none;">
+  <h2>🌊 Mô phỏng dòng chảy liên hồ & Sông La (phiên bản đơn giản)</h2>
+
+  <label>Lượng mưa trung bình vùng thượng nguồn (mm):</label><br>
+  <input type="number" id="rainFlow" value="100"><br>
+
+  <button class="btn-primary" onclick="simulateFlow()">▶ Mô phỏng dòng chảy</button>
+
+  <div id="flowResult" class="result" style="display:none;"></div>
+</div>
+
+<!-- TAB 3: REPORT / PDF -->
+<div id="reportTab" class="container" style="display:none;">
+  <h2>📄 Xuất báo cáo PDF nâng cao & SOS</h2>
+
+  <div class="section-grid">
+    <div class="card">
+      <h3>Thông tin báo cáo</h3>
+      <label>Tên hồ chứa:</label><br>
+      <input id="repName" value="Hồ Kẻ Gỗ"><br>
+
+      <label>Mực nước hiện tại (m):</label><br>
+      <input id="repNow" value="32.5"><br>
+
+      <label>Dự báo sau 24h (m):</label><br>
+      <input id="repFuture" value="33.8"><br>
+
+      <label>Mức cảnh báo:</label><br>
+      <select id="repLevel">
+        <option>🟢 An toàn</option>
+        <option>🟡 Cảnh báo</option>
+        <option>🟠 Nguy cơ cao</option>
+        <option>🔴 Khẩn cấp</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <h3>Hành động</h3>
+      <button class="btn-primary" onclick="exportPDF()">📄 Xuất báo cáo PDF nâng cao</button><br>
+      <button class="btn-primary" style="background:#d7263d;margin-top:8px;" onclick="sendSOS()">🚨 Gửi SOS</button>
+      <p id="reportStatus" style="margin-top:10px;font-size:13px;color:#333;"></p>
+      <small>Nếu chưa có dự báo gần nhất, hãy quay lại tab 🧠 AI Dự báo để chạy dự báo trước khi xuất PDF.</small>
+    </div>
+  </div>
+</div>
+
+<footer>© 2025 SafeRoute AI — Reservoir Module v4 PRO (AI + Liên hồ + PDF + Scenarios)</footer>
+
+<script>
+// =========================
+//  DATABASE HỒ CHỨA
+// =========================
+const reservoirDB = {
+  "ke_go": {
+    name: "Hồ Kẻ Gỗ",
+    z0: 30.5,
+    limit: 34.0,
+    minLevel: 25.0,
+    designFlood: 36.0,
+    coeffRain: 0.060,
+    coeffQin: 0.045,
+    coeffQout: -0.040,
+    qMax: 600
+  },
+  "ngan_truoi": {
+    name: "Hồ Ngàn Trươi",
+    z0: 28.0,
+    limit: 39.5,
+    minLevel: 24.0,
+    designFlood: 41.0,
+    coeffRain: 0.055,
+    coeffQin: 0.050,
+    coeffQout: -0.035,
+    qMax: 700
+  },
+  "song_rac": {
+    name: "Hồ Sông Rác",
+    z0: 26.5,
+    limit: 32.5,
+    minLevel: 22.0,
+    designFlood: 34.0,
+    coeffRain: 0.045,
+    coeffQin: 0.040,
+    coeffQout: -0.030,
+    qMax: 400
+  },
+  "song_tri": {
+    name: "Hồ Sông Trí",
+    z0: 31.8,
+    limit: 36.0,
+    minLevel: 27.0,
+    designFlood: 37.5,
+    coeffRain: 0.052,
+    coeffQin: 0.044,
+    coeffQout: -0.035,
+    qMax: 450
+  },
+  "thac_trang": {
+    name: "Hồ Thác Trắng",
+    z0: 29.0,
+    limit: 35.0,
+    minLevel: 24.0,
+    designFlood: 37.0,
+    coeffRain: 0.050,
+    coeffQin: 0.043,
+    coeffQout: -0.032,
+    qMax: 500
+  },
+  "thuy_yen": {
+    name: "Hồ Thủy Yên – Thủy Cam",
+    z0: 18.0,
+    limit: 23.5,
+    minLevel: 15.0,
+    designFlood: 25.0,
+    coeffRain: 0.040,
+    coeffQin: 0.038,
+    coeffQout: -0.028,
+    qMax: 350
+  }
+};
+
+let lastForecast = null;   // lưu kết quả dự báo gần nhất cho PDF
+let chartInstance = null;  // Chart.js instance
+
+// =========================
+//  TAB SWITCH
+// =========================
+function showTab(tabId,btn){
+  document.querySelectorAll(".container").forEach(t=>t.style.display="none");
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  document.getElementById(tabId).style.display="block";
+  btn.classList.add("active");
+}
+
+// =========================
+//  CẬP NHẬT INFO KHI CHỌN HỒ
+// =========================
+function onReservoirChange(){
+  const key = document.getElementById("resSelect").value;
+  const res = reservoirDB[key];
+  document.getElementById("infoLimit").innerText = res.limit.toFixed(1);
+  document.getElementById("infoZ0").innerText = res.z0.toFixed(1);
+}
+
+// =========================
+//  HÀM TÍNH MỰC NƯỚC
+// =========================
+function calcLevels(res, rain, qIn, qOut){
+  const {z0, coeffRain:a, coeffQin:b, coeffQout:c} = res;
+  const z6  = z0 + a*rain + b*qIn + c*qOut;
+  const z12 = z6 + rain*0.010 + qIn*0.008;
+  const z24 = z12 + rain*0.015 + qIn*0.012;
+  return {z6,z12,z24};
+}
+
+// =========================
+//  GỢI Ý Qout TỐI ƯU
+// =========================
+function suggestOptimalQout(res, rain, qIn){
+  const target = res.limit - 0.3; // giữ dưới giới hạn 0.3 m
+  const base = calcLevels(res, rain, qIn, 0).z24;
+  // xấp xỉ độ nhạy theo Qout
+  const z24q100 = calcLevels(res, rain, qIn, 100).z24;
+  const c_eff = (z24q100 - base) / 100; // thường là số âm
+  let qOpt;
+  if (Math.abs(c_eff) < 1e-6){
+    qOpt = 0;
+  } else {
+    qOpt = (target - base) / c_eff;
+  }
+  // Giới hạn trong [0, qMax]
+  qOpt = Math.max(0, Math.min(res.qMax, qOpt));
+  return qOpt;
+}
+
+// =========================
+//  TÍNH TOÁN AN TOÀN HỒ
+// =========================
+function evaluateSafety(res, z24){
+  const margin = res.limit - z24;
+  let level, badgeClass, advice;
+  if (margin >= 1.0){
+    level = "🟢 An toàn"; badgeClass = "badge-safe";
+    advice = "Tiếp tục vận hành bình thường, theo dõi mưa và lưu lượng đến.";
+  } else if (margin >= 0 && margin < 1.0){
+    level = "🟡 Cảnh báo"; badgeClass = "badge-warn";
+    advice = "Tăng cường quan trắc mưa, chuẩn bị phương án xả điều tiết chủ động.";
+  } else if (margin >= -0.5 && margin < 0){
+    level = "🟠 Nguy cơ cao"; badgeClass = "badge-high";
+    advice = "Tổ chức trực ban 24/24, chủ động tăng lưu lượng xả có kiểm soát, thông báo hạ du.";
+  } else {
+    level = "🔴 Khẩn cấp"; badgeClass = "badge-emg";
+    advice = "Kích hoạt phương án PCTT cấp bách, xả theo lệnh chỉ huy PCTT, cảnh báo sơ tán vùng hạ du.";
+  }
+  const safetyIndex = (z24 - res.minLevel) / (res.designFlood - res.minLevel);
+  return {level,badgeClass,advice,safetyIndex};
+}
+
+// =========================
+//  DỰ BÁO 3 KỊCH BẢN
+// =========================
+function runForecast(){
+  const key = document.getElementById("resSelect").value;
+  const res = reservoirDB[key];
+  const rain = Number(document.getElementById("rain").value);
+  const qIn  = Number(document.getElementById("qin").value);
+  const qOut = Number(document.getElementById("qout").value);
+
+  const scenarios = [
+    {id:"low",  label:"Mưa thấp (70%)",  factor:0.7},
+    {id:"base", label:"Mưa dự kiến (100%)", factor:1.0},
+    {id:"high", label:"Mưa cực đoan (150%)", factor:1.5}
+  ];
+
+  const resultRows = [];
+  const times = [0,6,12,24];
+  const seriesLow = [res.z0], seriesBase = [res.z0], seriesHigh = [res.z0];
+  let base24 = null;
+
+  scenarios.forEach(s=>{
+    const r = rain * s.factor;
+    const lv = calcLevels(res, r, qIn, qOut);
+    if (s.id==="low")  {seriesLow.push(lv.z6, lv.z12, lv.z24);}
+    if (s.id==="base") {seriesBase.push(lv.z6, lv.z12, lv.z24); base24 = lv.z24;}
+    if (s.id==="high") {seriesHigh.push(lv.z6, lv.z12, lv.z24);}
+    resultRows.push({
+      label:s.label,
+      rain:r,
+      z6:lv.z6,
+      z12:lv.z12,
+      z24:lv.z24
+    });
+  });
+
+  // Gợi ý Qout tối ưu dựa trên kịch bản trung bình
+  const qOpt = suggestOptimalQout(res, rain, qIn);
+  document.getElementById("qoutOpt").value = qOpt.toFixed(0);
+
+  // Đánh giá an toàn theo kịch bản trung bình
+  const safety = evaluateSafety(res, base24);
+
+  // Hiển thị bảng kết quả
+  let html = `<b>Dự báo cho hồ: ${res.name}</b><br>
+              Mực nước ban đầu: <b>${res.z0.toFixed(2)} m</b><br>
+              Ngưỡng giới hạn lũ: <b>${res.limit.toFixed(2)} m</b><br><br>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Kịch bản</th>
+                    <th>Mưa (mm)</th>
+                    <th>Z sau 6h (m)</th>
+                    <th>Z sau 12h (m)</th>
+                    <th>Z sau 24h (m)</th>
+                  </tr>
+                </thead>
+                <tbody>`;
+  resultRows.forEach(r=>{
+    html += `<tr>
+      <td>${r.label}</td>
+      <td>${r.rain.toFixed(1)}</td>
+      <td>${r.z6.toFixed(2)}</td>
+      <td>${r.z12.toFixed(2)}</td>
+      <td>${r.z24.toFixed(2)}</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById("aiResult").innerHTML = html;
+  document.getElementById("aiResult").style.display = "block";
+
+  // Khối an toàn hồ
+  const safetyDiv = document.getElementById("safetyResult");
+  safetyDiv.innerHTML = `
+    <b>Đánh giá an toàn hồ (kịch bản mưa dự kiến):</b><br>
+    Mực nước sau 24h: <b>${base24.toFixed(2)} m</b> —
+    <span class="badge ${safety.badgeClass}">${safety.level}</span><br>
+    Chỉ số an toàn tương đối: <b>${(safety.safetyIndex*100).toFixed(1)}%</b><br><br>
+    🔎 Khuyến nghị vận hành:<br>
+    ${safety.advice}<br><br>
+    🤖 Gợi ý xả: nên xả khoảng <b>${qOpt.toFixed(0)} m³/s</b> (trong giới hạn tối đa ${res.qMax} m³/s),
+    đồng thời theo dõi mực nước thực tế và cập nhật dự báo.
+  `;
+  safetyDiv.style.display = "block";
+
+  // Cập nhật biểu đồ
+  updateChart(times, seriesLow, seriesBase, seriesHigh);
+
+  // Lưu lại cho PDF
+  lastForecast = {
+    reservoirKey: key,
+    reservoirName: res.name,
+    rainInput: rain,
+    qIn,
+    qOut,
+    scenarios: resultRows,
+    qOutOpt: qOpt,
+    safety
+  };
+
+  // Đồng bộ sang tab báo cáo
+  document.getElementById("repName").value = res.name;
+  document.getElementById("repNow").value = res.z0.toFixed(2);
+  document.getElementById("repFuture").value = base24.toFixed(2);
+  document.getElementById("repLevel").value = safety.level;
+}
+
+// =========================
+//  BIỂU ĐỒ Chart.js
+// =========================
+function updateChart(times, lowData, baseData, highData){
+  const ctx = document.getElementById("forecastChart").getContext("2d");
+  document.getElementById("chartContainer").style.display = "block";
+
+  const data = {
+    labels: times.map(t=>t+"h"),
+    datasets: [
+      {
+        label: "Mưa thấp (70%)",
+        data: lowData,
+        borderWidth: 2,
+        fill:false
+      },
+      {
+        label: "Mưa dự kiến (100%)",
+        data: baseData,
+        borderWidth: 2,
+        fill:false
+      },
+      {
+        label: "Mưa cực đoan (150%)",
+        data: highData,
+        borderWidth: 2,
+        fill:false
+      }
+    ]
+  };
+
+  const options = {
+    responsive:true,
+    plugins:{legend:{position:"bottom"}},
+    scales:{y:{title:{display:true,text:"Mực nước (m)"}}}
+  };
+
+  if (chartInstance){
+    chartInstance.data = data;
+    chartInstance.options = options;
+    chartInstance.update();
+  } else {
+    chartInstance = new Chart(ctx, {
+      type:"line",
+      data,
+      options
+    });
+  }
+}
+
+// =========================
+//  MÔ PHỎNG LIÊN HỒ (ĐƠN GIẢN)
+// =========================
+function simulateFlow(){
+  const rain = Number(document.getElementById("rainFlow").value);
+  const baseFlow = rain * 0.8;
+  const nganTruoiOut = baseFlow * 0.9;
+  const keGoOut = nganTruoiOut * 0.85;
+  const songLaRise = (keGoOut / 110).toFixed(2);
+
+  const html = `
+  💧 <b>Dòng chảy mô phỏng (sơ bộ):</b><br>
+  - Ngàn Trươi xả: <b>${nganTruoiOut.toFixed(2)} m³/s</b><br>
+  - Kẻ Gỗ nhận: <b>${keGoOut.toFixed(2)} m³/s</b><br>
+  - Mực nước Sông La dâng: <b>${songLaRise} m</b><br><br>
+  ⏱️ Sau ~3h: nước từ Ngàn Trươi tới Kẻ Gỗ<br>
+  ⏱️ Sau ~5h: Sông La đạt đỉnh khoảng ${songLaRise} m<br>
+  ⚠️ Khu vực Đức Thọ & Hồng Lĩnh cần cảnh báo mức 2, theo dõi lưu lượng về.
+  `;
+  document.getElementById("flowResult").innerHTML = html;
+  document.getElementById("flowResult").style.display = "block";
+}
+
+// =========================
+//  XUẤT PDF NÂNG CAO
+// =========================
+async function exportPDF(){
+  if (!lastForecast){
+    alert("Chưa có kết quả dự báo. Vui lòng sang tab 🧠 AI Dự báo để chạy dự báo trước.");
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+
+  const name = document.getElementById("repName").value || lastForecast.reservoirName;
+  const now  = document.getElementById("repNow").value;
+  const fut  = document.getElementById("repFuture").value;
+  const levelText = document.getElementById("repLevel").value;
+
+  // Tiêu đề
+  pdf.setFontSize(15);
+  pdf.text("BÁO CÁO CẢNH BÁO LŨ - SAFE ROUTE AI",10,15);
+
+  pdf.setFontSize(11);
+  pdf.text(`Hồ chứa: ${name}`,10,25);
+  pdf.text(`Mực nước hiện tại: ${now} m`,10,32);
+  pdf.text(`Dự báo sau 24h (kịch bản trung bình): ${fut} m`,10,39);
+  pdf.text(`Mức cảnh báo: ${levelText}`,10,46);
+  pdf.text(`Thời gian lập báo cáo: ${new Date().toLocaleString()}`,10,53);
+
+  pdf.text("---------------------------------------------------------",10,60);
+  pdf.text("1. Kết quả dự báo 3 kịch bản mưa",10,68);
+
+  let y = 76;
+  pdf.setFontSize(10);
+  pdf.text("Kịch bản              Mưa(mm)   Z6h(m)   Z12h(m)   Z24h(m)",10,y); y+=5;
+  lastForecast.scenarios.forEach(s=>{
+    const line = `${s.label.padEnd(19)} ${s.rain.toFixed(1).padStart(7)}   ${s.z6.toFixed(2).padStart(5)}   ${s.z12.toFixed(2).padStart(7)}   ${s.z24.toFixed(2).padStart(7)}`;
+    pdf.text(line,10,y);
+    y+=5;
+  });
+
+  y+=4;
+  pdf.text("2. Đánh giá an toàn & gợi ý vận hành",10,y); y+=6;
+  pdf.text(`- Mức độ an toàn: ${lastForecast.safety.level}`,10,y); y+=5;
+  pdf.text(`- Chỉ số an toàn tương đối: ${(lastForecast.safety.safetyIndex*100).toFixed(1)}%`,10,y); y+=5;
+  pdf.text(`- Gợi ý Qout AI: ~${lastForecast.qOutOpt.toFixed(0)} m3/s (tùy điều kiện thực tế)`,10,y); y+=5;
+
+  // Chèn biểu đồ nếu có
+  if (chartInstance){
+    try{
+      const canvas = document.getElementById("forecastChart");
+      const imgData = canvas.toDataURL("image/png",1.0);
+      pdf.text("3. Biểu đồ mực nước theo thời gian (3 kịch bản):",10,y+5);
+      pdf.addImage(imgData,"PNG",10,y+10,180,80);
+    }catch(e){
+      console.error("Lỗi khi thêm biểu đồ vào PDF:",e);
+    }
+  }
+
+  // Chân trang
+  pdf.setFontSize(9);
+  pdf.text("Hệ thống AI Reservoir - Hà Tĩnh 2025",10,285);
+
+  pdf.save("SafeRoute_Report_ReservoirAI_v4.pdf");
+  document.getElementById("reportStatus").innerText="✅ Báo cáo nâng cao đã được tải xuống.";
+}
+
+// =========================
+//  GỬI SOS
+// =========================
+function sendSOS(){
+  const msg="📡 SOS khẩn cấp! Cảnh báo mực nước vượt ngưỡng cho phép!";
+  alert(msg);
+  document.getElementById("reportStatus").innerText="🚨 SOS đã gửi tới trung tâm cứu hộ (mô phỏng).";
+  console.log(msg);
+}
+
+// Khởi tạo info ban đầu
+onReservoirChange();
+</script>
+
+</body>
+</html>

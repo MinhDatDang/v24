@@ -1,0 +1,1788 @@
+<!DOCTYPE html> 
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Hệ thống Dự báo Thiên tai Ứng dụng AI</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- html2canvas + jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+/* ===================================================
+   🌤 SAFE ROUTE AI MAPS — iOS Light Blue Theme
+   =================================================== */
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Roboto,Arial;
+  margin:0;padding:0;
+  background:#f4f8ff;
+  color:#111;
+  transition:0.3s;
+}
+body.dark{background:#000;color:#eee;}
+.container{max-width:1150px;margin:auto;padding:16px;}
+
+/* ========== HEADER (iOS Blur Style) ========== */
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:rgba(245,248,255,0.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(0,0,0,0.06);
+  box-shadow:0 2px 12px rgba(0,0,0,0.05);
+  padding:12px 20px;
+  position:sticky;top:0;z-index:50;
+  border-radius:0 0 18px 18px;
+}
+.header-title{
+  font-size:20px;
+  font-weight:700;
+  color:#003366;
+}
+.header-info{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  font-weight:600;
+  color:#0066cc;
+  font-size:16px;
+}
+.header-info span{
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+/* ========== CONTROL PANEL ========== */
+.topbar{
+  background:#ffffff;
+  border-radius:24px;
+  padding:16px 20px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.08);
+  margin:18px 0;
+  display:flex;
+  flex-wrap:wrap;
+  gap:14px;
+  align-items:center;
+  border:1px solid #e1e6f3;
+}
+.top-group{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px;
+}
+button{
+  border:none;
+  border-radius:999px;
+  padding:9px 15px;
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  transition:0.2s;
+  box-shadow:0 2px 6px rgba(0,0,0,0.06);
+}
+button.main{background:#007aff;color:#fff;}
+button.success{background:#34c759;color:#fff;}
+button.danger{background:#ff3b30;color:#fff;}
+button.gray{background:#d1d1d6;color:#111;}
+button:hover{opacity:0.85;}
+input{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid #cfd7e4;
+  background:#f9fbff;
+  width:120px;
+}
+.control-row{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px;
+  background:#f3f6ff;
+  border:1px solid #e2e8ff;
+  border-radius:18px;
+  padding:10px 14px;
+}
+.control-row span.label{
+  font-size:13px;
+  color:#333;
+  font-weight:500;
+}
+.radius-btn, .ai-btn{
+  padding:8px 14px;
+  border-radius:999px;
+  border:0;
+  background:#e5edff;
+  color:#1a2a4a;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+}
+.radius-btn.active, .ai-btn.active{
+  background:#007aff;
+  color:#fff;
+}
+
+/* ========== BOX ========== */
+.box{
+  background:#ffffff;
+  border-radius:22px;
+  padding:16px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.06);
+  margin-bottom:18px;
+  border:1px solid #e5e8f0;
+}
+#map-main{
+  height:520px;
+  width:100%;
+  border-radius:22px;
+  box-shadow:0 8px 25px rgba(0,0,0,0.12);
+  margin-bottom:18px;
+}
+#map-dam{
+  height:520px;
+  width:100%;
+  border-radius:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.15);
+  margin-bottom:20px;
+}
+.forecast-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-radius:16px;
+  padding:10px 14px;
+  background:#f1f6ff;
+  border:1px solid #d8e2ff;
+  margin-bottom:8px;
+}
+.forecast-date{font-weight:600;color:#002b72;}
+.forecast-desc{font-size:13px;color:#333;}
+.forecast-rain{font-weight:600;color:#111;}
+.small{font-size:13px;color:#555;}
+
+@media(max-width:700px){
+  .header{flex-direction:column;align-items:flex-start;gap:6px;}
+  .topbar{padding:10px;border-radius:14px;}
+}
+</style>
+</head>
+
+<body><button onclick="location.href='index.html'" style="position:fixed;top:10px;left:10px;z-index:9999;">⬅ Trang chính</button>
+<!-- ================= HEADER ================= -->
+<div class="header">
+  <div class="header-info">
+    <span>🌡 <b id="live-temp">--°C</b></span>
+  </div>
+  <div class="header-title">🌪 Hệ thống Dự báo Thiên tai Ứng dụng AI</div>
+  <div class="header-info">
+    <span>⏱ <b id="live-clock">--:--:--</b></span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ========================
+     PAGE 1: SAFE ROUTE / AI
+     ======================== -->
+<div id="page1">
+
+<!-- =============================
+     BẢNG ĐIỀU KHIỂN (CONTROL PANEL)
+     ============================= -->
+<div class="topbar">
+  <div class="top-group">
+    <button onclick="getMyLocation()" class="main">📍 GPS</button>
+    <input id="lat" placeholder="Latitude">
+    <input id="lng" placeholder="Longitude">
+    <button onclick="loadLocation()" class="main">Hiển thị</button>
+  </div>
+
+  <div class="top-group">
+    <button onclick="simulateDanger()" class="success">🛟 Simulate</button>
+    <button onclick="runFlowAIV2()" class="main">🌊 AI Dòng Chảy V2</button>
+    <button onclick="toggleRadar()" class="main">🌐 Radar</button>
+    <button onclick="toggleDarkMode()">🌙 Dark</button>
+    <button onclick="toggleUIMode()" class="danger">📱 Giao diện</button>
+  </div>
+
+  <div class="control-row" style="margin-top:10px;">
+    <span class="label">📏 Bán kính phân tích:</span>
+    <button class="radius-btn" data-radius="5" onclick="setRadius(5)">5 km</button>
+    <button class="radius-btn" data-radius="10" onclick="setRadius(10)">10 km</button>
+    <button class="radius-btn" data-radius="30" onclick="setRadius(30)">30 km</button>
+
+    <span class="label" style="margin-left:12px;">🤖 Chế độ AI:</span>
+    <button id="ai-real-btn" class="ai-btn" onclick="setAIMode('real')">AI Thật</button>
+    <button id="ai-sim-btn" class="ai-btn" onclick="setAIMode('sim')">AI Mô phỏng</button>
+  </div>
+
+  <div class="top-group" style="margin-top:10px;">
+    <button onclick="computeFloodPath()" class="main">🧭 SafeRoute AI</button>
+    <button onclick="computeSafeRouteProV3()" class="main">🧠 SafeRoute Pro V3</button>
+    <button onclick="startFloodTimeline()" class="main">⏱ Flood Timeline AI</button>
+    <button onclick="clearFloodPath()" class="danger">✖ Xóa</button>
+    <button onclick="exportPDF()" class="gray">📄 PDF</button>
+    <button onclick="goToDamPage()" class="main">🔍 Tra cứu đập</button>
+    <button onclick="openSOSForm()" class="danger">🚨 Gửi SOS</button>
+    <button onclick="showPage(3)" class="main">🗺 Trung tâm cứu hộ</button>
+  </div>
+
+  <div id="status" class="small" style="margin-left:auto;font-weight:600;">
+    Sẵn sàng
+  </div>
+</div>
+
+<!-- =============================
+     BẢN ĐỒ TRANG 1
+     ============================= -->
+<div id="map-main"></div>
+
+<!-- =============================
+     THỜI TIẾT + PHÂN TÍCH AI
+     ============================= -->
+<div class="box">
+  <h3>🌧 Thông tin Thời tiết & Phân tích AI</h3>
+
+  <p>📍 Vị trí: <span id="current-location">---</span></p>
+  <p>🌧 Lượng mưa: <span id="current-rain">---</span> mm</p>
+  <p>💧 Thông lượng: <span id="current-precip">---</span> mm</p>
+
+  <div id="ai-result"
+       class="box"
+       style="background:#fffef5;border:1px solid #ffeb99;margin-top:12px;">
+    AI chưa chạy — chọn chế độ và bấm "SafeRoute AI"
+  </div>
+
+  <div class="small" style="margin-top:8px;">
+    Chú giải:
+    <span style="color:#d32f2f">● vùng nguy hiểm</span> ·
+    <span style="color:#ff9800">▲ hướng dòng chảy</span> ·
+    <span style="color:#007aff">— tuyến an toàn</span>
+  </div>
+</div>
+
+<!-- 🔹 BOX: AI DÒNG CHẢY V2 + FLOOD TIMELINE -->
+<div class="box">
+  <h3>🌊 Kết quả AI Dòng Chảy V2</h3>
+  <p id="flow-ai-v2-result">Chưa phân tích.</p>
+
+  <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #dde3ff;">
+    <div class="small" style="margin-bottom:6px;">
+      ⏱ <b>Mô phỏng nước lan theo thời gian (Flood Timeline AI)</b><br/>
+      <span id="flood-timeline-label">Chưa chạy mô phỏng.</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+      <button class="main" onclick="startFloodTimeline()">▶ Chạy mô phỏng</button>
+      <button class="gray" onclick="stopFloodTimeline()">⏹ Dừng</button>
+      <span class="small">Khung thời gian: <span id="flood-timeline-step">-</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- =============================
+     DỰ BÁO 3 NGÀY
+     ============================= -->
+<div class="box">
+  <h3>📅 Dự báo 3 ngày tiếp theo</h3>
+  <div id="forecast"></div>
+</div>
+
+<!-- =============================
+     CẢNH BÁO DI TẢN
+     ============================= -->
+<div id="evacuation-alert"></div>
+<!-- =============================
+     CÀI ĐẶT CẢNH BÁO
+     ============================= -->
+<div class="box">
+  <h3>⚙️ Cài đặt cảnh báo di tản</h3>
+
+  <p>Ngưỡng mưa (mm):</p>
+  <input id="evac-threshold" type="number" min="1" style="width:120px;">
+
+  <br><br>
+
+  <p>Chọn điểm an toàn (nếu không chọn, AI tự tìm):</p>
+  <select id="evac-point-select"></select>
+
+  <br><br>
+
+  <button onclick="saveEvacSettings()" class="success">💾 Lưu cài đặt</button>
+</div>
+
+<audio id="alert-sound"
+       src="https://www.soundjay.com/button/beep-07.wav"
+       preload="auto"></audio>
+
+</div> <!-- END PAGE 1 -->
+
+
+<!-- ========================
+     PAGE 2: TRA CỨU ĐẬP
+     ======================== -->
+<div id="page2" style="display:none;">
+
+  <!-- TOPBAR TRANG 2 -->
+  <div class="topbar">
+    <div class="top-group">
+      <button onclick="showPage(1)" class="gray">🔙 Quay lại</button>
+      <button onclick="toggleDamRadar()" class="main">🌧 Radar mưa</button>
+      <button onclick="analyzeRiskAuto()" class="danger">⚠️ Phân tích nguy cơ</button>
+    </div>
+
+    <div class="top-group">
+      <span class="small">📏 Bán kính tìm đập:</span>
+      <button class="dam-radius-btn" data-radius="10" onclick="setDamRadius(10)">10 km</button>
+      <button class="dam-radius-btn" data-radius="20" onclick="setDamRadius(20)">20 km</button>
+      <button class="dam-radius-btn" data-radius="50" onclick="setDamRadius(50)">50 km</button>
+      <button class="dam-radius-btn" data-radius="100" onclick="setDamRadius(100)">100 km</button>
+      <button class="dam-radius-btn" data-radius="200" onclick="setDamRadius(200)">200 km</button>
+    </div>
+
+    <div id="status-dam" class="small" style="margin-left:auto;font-weight:600;">
+      Sẵn sàng
+    </div>
+  </div>
+
+  <!-- BẢN ĐỒ TRANG 2 -->
+  <div id="map-dam"></div>
+
+  <!-- KẾT QUẢ TRA CỨU -->
+  <div class="box">
+    <h3>📋 Danh sách đập trong bán kính <span id="dam-radius-label">10</span> km</h3>
+    <div id="dam-list" style="max-height:240px;overflow:auto;font-size:15px;"></div>
+  </div>
+
+  <!-- CẢNH BÁO & PHÂN TÍCH -->
+  <div class="box">
+    <h3>🧠 Phân tích rủi ro khu vực</h3>
+    <p><b>📍 Tọa độ:</b> <span id="dam-location-label">---</span></p>
+    <p><b>🏔 Cao độ:</b> <span id="dam-elev-label">---</span> m</p>
+    <p><b>🌧 Lượng mưa hiện tại:</b> <span id="dam-rain-label">---</span> mm</p>
+    <p><b>⚠️ Kết luận AI:</b> <span id="dam-risk-label" style="font-weight:600;color:#d32f2f;">---</span></p>
+  </div>
+
+</div> <!-- END PAGE 2 -->
+
+
+<!-- ========================
+     PAGE 3: TRUNG TÂM CỨU HỘ (RESCUE HUB)
+     ======================== -->
+<div id="page3" style="display:none;">
+
+  <div class="topbar">
+    <div class="top-group">
+      <button onclick="showPage(1)" class="gray">🔙 Quay lại</button>
+      <button onclick="refreshSOSData()" class="main">🔄 Cập nhật SOS</button>
+    </div>
+    <div id="status-rescue" class="small" style="margin-left:auto;font-weight:600;">
+      Sẵn sàng
+    </div>
+  </div>
+
+  <div id="map-rescue" style="height:520px;width:100%;border-radius:20px;box-shadow:0 10px 25px rgba(0,0,0,0.15);margin-bottom:18px;"></div>
+
+  <div class="box">
+    <h3>🚨 Danh sách tín hiệu SOS</h3>
+    <div id="sos-list" style="max-height:260px;overflow:auto;font-size:15px;"></div>
+  </div>
+
+</div>
+
+</div> <!-- END CONTAINER -->
+<script>
+// ===================================================
+// 🌪 SAFE ROUTE AI MAPS — PAGE 1 (CHÍNH)
+// ===================================================
+
+// ========== BIẾN TOÀN CỤC TRANG 1 ==========
+let map, userMarker, safeRouteLine, floodArrows = [];
+let currentLat = null, currentLng = null;
+let safePoints = [];
+let aiMode = "sim";
+let radiusKm = 10;
+let radarLayer = null;
+
+// --- AI Dòng Chảy V2 ---
+let flowV2Layers = [];
+let flowV2FloodPolygon = null;
+
+// ========== KHỞI TẠO MAP ==========
+function initMap() {
+  map = L.map("map-main").setView([18.3, 105.7], 10);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18
+  }).addTo(map);
+}
+initMap();
+
+// ========== GPS ==========
+function getMyLocation() {
+  if (!navigator.geolocation) {
+    alert("Trình duyệt không hỗ trợ định vị GPS.");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude, longitude } = pos.coords;
+    document.getElementById("lat").value = latitude.toFixed(5);
+    document.getElementById("lng").value = longitude.toFixed(5);
+    loadLocation();
+  }, err => alert("Không lấy được vị trí: " + err.message));
+}
+
+// ========== LOAD LOCATION ==========
+function loadLocation() {
+  currentLat = parseFloat(document.getElementById("lat").value);
+  currentLng = parseFloat(document.getElementById("lng").value);
+  if (isNaN(currentLat) || isNaN(currentLng)) {
+    alert("Vui lòng nhập tọa độ hợp lệ.");
+    return;
+  }
+  if (userMarker) map.removeLayer(userMarker);
+
+  userMarker = L.marker([currentLat, currentLng]).addTo(map)
+    .bindPopup("📍 Vị trí của bạn").openPopup();
+
+  map.setView([currentLat, currentLng], 13);
+  updateWeather();
+}
+
+// ========== WEATHER ==========
+async function updateWeather() {
+  if (!currentLat || !currentLng) return;
+  try {
+    const url = 
+`https://api.open-meteo.com/v1/forecast?latitude=${currentLat}&longitude=${currentLng}&hourly=temperature_2m,precipitation&current_weather=true&forecast_days=3&timezone=auto`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const temp = data.current_weather?.temperature ?? "--";
+    document.getElementById("live-temp").innerText = `${temp}°C`;
+
+    document.getElementById("current-location").innerText = 
+      `${currentLat.toFixed(3)}, ${currentLng.toFixed(3)}`;
+
+    document.getElementById("current-rain").innerText = 
+      data.hourly.precipitation[0] ?? 0;
+
+    document.getElementById("current-precip").innerText =
+      (data.hourly.precipitation.reduce((a,b)=>a+b,0)/data.hourly.precipitation.length).toFixed(1);
+
+    // Forecast 3 days
+    const forecastDiv = document.getElementById("forecast");
+    forecastDiv.innerHTML = "";
+    const days = [...Array(3)].map((_,i)=>{
+      const t = data.hourly.temperature_2m.slice(i*24,(i+1)*24);
+      const r = data.hourly.precipitation.slice(i*24,(i+1)*24);
+      const avgT = (t.reduce((a,b)=>a+b,0)/t.length).toFixed(1);
+      const sumR = r.reduce((a,b)=>a+b,0).toFixed(1);
+      return {day: i+1, temp: avgT, rain: sumR};
+    });
+
+    days.forEach(d=>{
+      forecastDiv.innerHTML += `
+        <div class="forecast-card">
+          <div class="forecast-date">Ngày +${d.day}</div>
+          <div class="forecast-desc">Nhiệt độ TB: ${d.temp}°C</div>
+          <div class="forecast-rain">Mưa: ${d.rain}mm</div>
+        </div>`;
+    });
+
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// ========== CLOCK ==========
+function startClock() {
+  setInterval(()=>{
+    const now = new Date();
+    document.getElementById("live-clock").innerText = 
+      now.toLocaleTimeString("vi-VN");
+  }, 1000);
+}
+startClock();
+
+// ========== SET RADIUS & AI MODE ==========
+function setRadius(km) {
+  radiusKm = km;
+  document.querySelectorAll(".radius-btn").forEach(btn=>btn.classList.remove("active"));
+  const btn = document.querySelector(`.radius-btn[data-radius='${km}']`);
+  if(btn) btn.classList.add("active");
+}
+function setAIMode(mode) {
+  aiMode = mode;
+  document.querySelectorAll(".ai-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById(mode==='real'?'ai-real-btn':'ai-sim-btn').classList.add("active");
+}
+
+// ========== RADAR LAYER ==========
+function toggleRadar() {
+  if (radarLayer) {
+    map.removeLayer(radarLayer);
+    radarLayer = null;
+  } else {
+    radarLayer = L.tileLayer(
+      "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02",
+      {opacity:0.5}
+    ).addTo(map);
+  }
+}
+// ========== SAFE ROUTE AI ==========
+async function computeFloodPath() {
+  if (!currentLat || !currentLng) {
+    alert("Chưa có vị trí. Hãy bật GPS hoặc nhập tọa độ trước.");
+    return;
+  }
+  setStatus("🔎 Đang phân tích đường đi an toàn...");
+
+  safePoints = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI * 2 / 6) * i;
+    const lat = currentLat + (radiusKm/111) * Math.cos(angle);
+    const lng = currentLng + (radiusKm/111) * Math.sin(angle);
+    safePoints.push({lat,lng});
+  }
+
+  const routes = await Promise.all(safePoints.map(async (p)=>{
+    try{
+      const url = `https://router.project-osrm.org/route/v1/driving/${currentLng},${currentLat};${p.lng},${p.lat}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(!data.routes || !data.routes[0]) return null;
+      return {p,dist:data.routes[0].distance,geo:data.routes[0].geometry};
+    }catch(err){
+      return null;
+    }
+  }));
+
+  let valid = routes.filter(r=>r);
+
+  if(valid.length===0){
+    let bestPoint = safePoints[0];
+    let bestDist = distanceKm(currentLat,currentLng,bestPoint.lat,bestPoint.lng);
+
+    for(const p of safePoints){
+      const d = distanceKm(currentLat,currentLng,p.lat,p.lng);
+      if(d<bestDist){bestDist=d;bestPoint=p;}
+    }
+
+    if(safeRouteLine){map.removeLayer(safeRouteLine);}
+    safeRouteLine = L.polyline([[currentLat,currentLng],[bestPoint.lat,bestPoint.lng]],{
+      color:"#007aff",weight:5
+    }).addTo(map);
+
+    L.circle([bestPoint.lat,bestPoint.lng],{radius:300,color:'#34c759',fillOpacity:0.3}).addTo(map);
+    map.fitBounds(safeRouteLine.getBounds());
+
+    setStatus("⚠️ OSRM lỗi, đã vẽ đường thẳng an toàn gần nhất.");
+    document.getElementById("ai-result").innerText =
+      "OSRM tạm không phản hồi — đã dùng đường thẳng gần nhất.";
+    return;
+  }
+
+  const best = valid.reduce((a,b)=>a.dist<b.dist?a:b);
+  if(safeRouteLine){map.removeLayer(safeRouteLine);}
+
+  safeRouteLine = L.geoJSON(best.geo,{color:"#007aff",weight:5}).addTo(map);
+  map.fitBounds(safeRouteLine.getBounds());
+  L.circle([best.p.lat,best.p.lng],{radius:300,color:'#34c759',fillOpacity:0.3}).addTo(map);
+
+  setStatus("✅ Đường an toàn đã sẵn sàng");
+  document.getElementById("ai-result").innerText =
+    "AI đã chọn tuyến an toàn nhất theo OSRM.";
+}
+
+// ========== CLEAR MAP ==========
+function clearFloodPath(){
+  if(safeRouteLine){map.removeLayer(safeRouteLine);}
+  floodArrows.forEach(a=>map.removeLayer(a));
+  floodArrows=[];
+
+  flowV2Layers.forEach(l=>map.removeLayer(l));
+  flowV2Layers=[];
+  if(flowV2FloodPolygon){map.removeLayer(flowV2FloodPolygon);flowV2FloodPolygon=null;}
+
+  setStatus("🧹 Đã xóa dữ liệu");
+}
+
+// ========== SIMULATE NGUY HIỂM (ĐÃ GỘP BÁO ĐỘNG) ==========
+function simulateDanger(){
+  if(!currentLat||!currentLng){
+    alert("Chưa có vị trí.");
+    return;
+  }
+
+  // Vẽ vùng nguy hiểm
+  L.circle([currentLat,currentLng],{
+      radius:800,
+      color:"#ff0000",
+      fillOpacity:0.3
+  }).addTo(map).bindPopup("⚠️ Khu vực nguy hiểm mô phỏng").openPopup();
+
+  setStatus("🛟 Mô phỏng thời tiết cực đoan.");
+
+  // ===== BÁO ĐỘNG ÂM THANH =====
+  const sound = document.getElementById("alert-sound");
+  try { sound.play().catch(()=>{}); } catch(e){}
+
+  // ===== FLASH CẢNH BÁO =====
+  document.body.style.transition = "0s";
+  let flashCount = 0;
+  const flashInterval = setInterval(()=>{
+    flashCount++;
+    document.body.style.background =
+      (flashCount % 2 == 0) ? "#ff000033" : "#ffffff";
+    if(flashCount >= 12){
+      clearInterval(flashInterval);
+      document.body.style.background = "";
+      document.body.style.transition = "0.3s";
+    }
+  }, 500);
+
+  // ===== BANNER CẢNH BÁO =====
+  const alertDiv = document.createElement("div");
+  alertDiv.id = "sim-alert-banner";
+  alertDiv.style.position = "fixed";
+  alertDiv.style.top = "20px";
+  alertDiv.style.left = "50%";
+  alertDiv.style.transform = "translateX(-50%)";
+  alertDiv.style.padding = "14px 22px";
+  alertDiv.style.borderRadius = "14px";
+  alertDiv.style.background = "#ff0000";
+  alertDiv.style.color = "#fff";
+  alertDiv.style.fontSize = "18px";
+  alertDiv.style.fontWeight = "700";
+  alertDiv.style.zIndex = "99999";
+  alertDiv.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)";
+  alertDiv.innerText = "🚨 CẢNH BÁO: MÔ PHỎNG THỜI TIẾT CỰC ĐOAN!";
+  document.body.appendChild(alertDiv);
+
+  setTimeout(()=>{
+    const b = document.getElementById("sim-alert-banner");
+    if(b) b.remove();
+  },10000);
+
+  // ===== AUTO CHẠY FLOW AI V2 =====
+  setTimeout(()=>{ runFlowAIV2(); }, 500);
+}
+
+// ========== LƯU CÀI ĐẶT ==========
+function saveEvacSettings(){
+  const threshold=document.getElementById("evac-threshold").value;
+  localStorage.setItem("evac-threshold",threshold);
+  alert("Đã lưu ngưỡng mưa: "+threshold+" mm");
+}
+function setStatus(t){document.getElementById("status").innerText=t;}
+
+// ========== DARK MODE ==========
+function toggleDarkMode(){
+  document.body.classList.toggle("dark");
+  map.setZoom(map.getZoom());
+}
+
+// ========== EXPORT PDF ==========
+async function exportPDF(){
+  const { jsPDF } = window.jspdf;
+  const canvas = await html2canvas(document.body);
+  const pdf = new jsPDF("p","mm","a4");
+  const imgData = canvas.toDataURL("image/png");
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = canvas.height * pdfWidth / canvas.width;
+  pdf.addImage(imgData,"PNG",0,0,pdfWidth,pdfHeight);
+  pdf.save("SafeRoute_Report.pdf");
+  setStatus("📄 Đã xuất báo cáo PDF");
+}
+
+// ========== UI MODE ==========
+function toggleUIMode(){
+  alert("Chức năng chuyển giao diện đang nâng cấp.");
+}
+
+// ========== CHUYỂN TRANG ==========
+
+function showPage(page){
+  const p1 = document.getElementById("page1");
+  const p2 = document.getElementById("page2");
+  const p3 = document.getElementById("page3");
+
+  if(page === 1){
+    if(p1) p1.style.display = "block";
+    if(p2) p2.style.display = "none";
+    if(p3) p3.style.display = "none";
+    setStatus("Sẵn sàng");
+  } else if(page === 2){
+    if(p1) p1.style.display = "none";
+    if(p2) p2.style.display = "block";
+    if(p3) p3.style.display = "none";
+    setDamStatus("Sẵn sàng");
+
+    if(currentLat && currentLng){
+      userLat = currentLat;
+      userLng = currentLng;
+      localStorage.setItem("userLat", userLat);
+      localStorage.setItem("userLng", userLng);
+      const lb = document.getElementById("dam-location-label");
+      if(lb) lb.innerText = `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+    }
+
+    if(!damMapInitialized){
+      initDamMap();
+      damMapInitialized = true;
+      if(userLat && userLng) showNearbyDams();
+    } else {
+      if(mapDam && userLat && userLng){
+        mapDam.setView([userLat, userLng], 11);
+        mapDam.invalidateSize();
+        showNearbyDams();
+      }
+    }
+  } else if(page === 3){
+    if(p1) p1.style.display = "none";
+    if(p2) p2.style.display = "none";
+    if(p3) p3.style.display = "block";
+    setRescueStatus("Sẵn sàng");
+    initOrUpdateRescueMap();
+  }
+}
+
+
+function goToDamPage(){
+  if(!currentLat || !currentLng){
+    alert("Vui lòng chọn vị trí trước.");
+    return;
+  }
+  showPage(2);
+}
+</script>
+
+<!-- ==========================================
+     🌊 AI DÒNG CHẢY V2 – 8 hướng + vùng ngập
+     ========================================== -->
+<script>
+async function runFlowAIV2(){
+  if(!currentLat || !currentLng){
+    alert("Chưa có vị trí!");
+    return;
+  }
+
+  const resultEl = document.getElementById("flow-ai-v2-result");
+  if(resultEl){
+    resultEl.innerText = "🔎 Đang phân tích DEM và dòng chảy...";
+  }
+
+  flowV2Layers.forEach(l => map.removeLayer(l));
+  flowV2Layers = [];
+  if(flowV2FloodPolygon){
+    map.removeLayer(flowV2FloodPolygon);
+    flowV2FloodPolygon = null;
+  }
+
+  const dirs = [
+    {name:"Bắc",      lat: 0.01,  lng: 0},
+    {name:"Đông Bắc", lat: 0.007, lng: 0.007},
+    {name:"Đông",     lat: 0,     lng: 0.01},
+    {name:"Đông Nam", lat:-0.007, lng: 0.007},
+    {name:"Nam",      lat:-0.01,  lng: 0},
+    {name:"Tây Nam",  lat:-0.007, lng:-0.007},
+    {name:"Tây",      lat: 0,     lng:-0.01},
+    {name:"Tây Bắc",  lat: 0.007, lng:-0.007},
+  ];
+
+  const elevData = [];
+
+  for(const d of dirs){
+    const lat2 = currentLat + d.lat;
+    const lng2 = currentLng + d.lng;
+    try{
+      const res = await fetch(
+        `https://api.opentopodata.org/v1/srtm90m?locations=${lat2},${lng2}`
+      );
+      const data = await res.json();
+      const elev = data.results?.[0]?.elevation ?? null;
+      elevData.push({dir:d.name, elev, lat:lat2, lng:lng2});
+    }catch(e){
+      elevData.push({dir:d.name, elev:null, lat:lat2, lng:lng2});
+    }
+  }
+
+  let centerElev = 0;
+  try{
+    const centerRes = await fetch(
+      `https://api.opentopodata.org/v1/srtm90m?locations=${currentLat},${currentLng}`
+    );
+    const centerData = await centerRes.json();
+    centerElev = centerData.results?.[0]?.elevation ?? 0;
+  }catch(e){centerElev=0;}
+
+  const validElev = elevData.filter(d => d.elev !== null);
+  if(validElev.length === 0){
+    resultEl.innerText = "Không lấy được DEM khu vực";
+    return;
+  }
+
+  let lowest = validElev[0];
+  validElev.forEach(d=>{ if(d.elev < lowest.elev) lowest = d; });
+
+  const slope = centerElev - lowest.elev;
+
+  let flowScore = 0;
+  if(slope > 50)      flowScore = 4;
+  else if(slope > 30) flowScore = 3;
+  else if(slope > 15) flowScore = 2;
+  else if(slope > 5)  flowScore = 1;
+
+  const floodPoints = [];
+  validElev.forEach(d=>{
+    const diff = centerElev - d.elev;
+    if(diff >= 10){
+      floodPoints.push(d);
+      const c = L.circle([d.lat,d.lng],{
+        radius:400,
+        color:"#ff4444",
+        fillOpacity:0.22
+      }).addTo(map);
+      flowV2Layers.push(c);
+    }
+  });
+
+  const approxAreaKm2 = (floodPoints.length * 0.5).toFixed(2);
+
+  if(floodPoints.length >= 3){
+    const polyLatLngs = floodPoints.map(p => [p.lat,p.lng]);
+    polyLatLngs.push([currentLat,currentLng]);
+    flowV2FloodPolygon = L.polygon(polyLatLngs,{
+      color:"#ff0000",
+      weight:1,
+      fillOpacity:0.08
+    }).addTo(map);
+  }
+
+  const angle = getDirAngle(lowest.dir);
+
+  const steps = 3;
+  for(let i=1;i<=steps;i++){
+    const factor = 0.004 * i;
+    const latArrow = currentLat + (lowest.lat - currentLat)*factor/0.01;
+    const lngArrow = currentLng + (lowest.lng - currentLng)*factor/0.01;
+
+    const arrowIcon = L.divIcon({
+      html: `<div class="arrow-anim" style="font-size:26px; transform: rotate(${angle}deg);">➤</div>`,
+      className:"",iconSize:[26,26],iconAnchor:[13,13]
+    });
+
+    const m = L.marker([latArrow,lngArrow],{icon:arrowIcon}).addTo(map);
+    flowV2Layers.push(m);
+  }
+
+  const centerArrowIcon = L.divIcon({
+    html:`<div class="arrow-anim" style="font-size:30px; transform: rotate(${angle}deg);">➤</div>`,
+    className:"",
+    iconSize:[30,30],iconAnchor:[15,15]
+  });
+
+  const mainArrow = L.marker([currentLat,currentLng],{icon:centerArrowIcon})
+    .addTo(map)
+    .bindPopup(`Hướng nước chảy chính: ${lowest.dir}`).openPopup();
+  flowV2Layers.push(mainArrow);
+
+  let level = "🟢 Yếu";
+  if(flowScore >= 4)      level = "🔴 Cực mạnh";
+  else if(flowScore >= 3) level = "🟠 Mạnh";
+  else if(flowScore >= 2) level = "🟡 Trung bình";
+
+  resultEl.innerHTML = `
+      🧭 <b>Hướng nước chảy mạnh nhất:</b> ${lowest.dir}<br>
+      🏔 <b>Độ cao tại bạn:</b> ${centerElev.toFixed(1)} m<br>
+      📉 <b>Điểm thấp nhất:</b> ${lowest.elev.toFixed(1)} m<br>
+      ⛰ <b>Độ dốc:</b> ${slope.toFixed(1)} m<br>
+      🌊 <b>Mức độ dòng chảy:</b> ${level}<br>
+      📐 <b>Diện tích nguy cơ:</b> ~ ${approxAreaKm2} km²<br>
+  `;
+}
+
+function getDirAngle(dir){
+  switch(dir){
+    case "Bắc": return -90;
+    case "Đông Bắc": return -45;
+    case "Đông": return 0;
+    case "Đông Nam": return 45;
+    case "Nam": return 90;
+    case "Tây Nam": return 135;
+    case "Tây": return 180;
+    case "Tây Bắc": return -135;
+  }
+  return 0;
+}
+</script>
+<!-- ==========================================
+     🌊 TRA CỨU ĐẬP / RỦI RO — PAGE 2
+     ========================================== -->
+<script>
+let mapDam=null, radarLayerDam=null, damLayer=null;
+let userLat=null, userLng=null;
+let radiusDamKm=parseInt(localStorage.getItem("radiusDamKm")||10);
+let damMapInitialized=false;
+
+function setDamStatus(t){
+  const el=document.getElementById("status-dam");
+  if(el) el.innerText=t;
+}
+
+function setDamRadius(km){
+  radiusDamKm=km;
+  localStorage.setItem("radiusDamKm",km);
+
+  const lb=document.getElementById("dam-radius-label");
+  if(lb) lb.innerText=km;
+
+  document.querySelectorAll(".dam-radius-btn").forEach(b=>{
+    b.classList.toggle("active",parseInt(b.dataset.radius)==km);
+  });
+
+  if(mapDam && userLat && userLng) showNearbyDams();
+}
+
+function initDamMap(){
+  mapDam=L.map("map-dam").setView([userLat||16, userLng||107], 9);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:18,
+    attribution:"© OpenStreetMap"
+  }).addTo(mapDam);
+
+  damLayer=L.layerGroup().addTo(mapDam);
+
+  if(userLat && userLng){
+    L.marker([userLat,userLng]).addTo(mapDam)
+      .bindPopup("📍 Vị trí của bạn").openPopup();
+
+    const lb=document.getElementById("dam-location-label");
+    if(lb) lb.innerText=`${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+  }
+
+  setDamRadius(radiusDamKm);
+}
+
+function toggleDamRadar(){
+  if(!mapDam) return;
+
+  if(radarLayerDam){
+    mapDam.removeLayer(radarLayerDam);
+    radarLayerDam=null;
+    setDamStatus("Đã ẩn radar");
+  } else {
+    radarLayerDam=L.tileLayer(
+      "https://tilecache.rainviewer.com/v2/radar/nowcast/0/256/{z}/{x}/{y}/2/1_1.png",
+      {opacity:0.55}
+    );
+    radarLayerDam.addTo(mapDam);
+    setDamStatus("Hiển thị radar mưa");
+  }
+}
+
+// ============================
+// 🌍 FETCH DATASET GEO-DAR / GDAT + FALLBACK
+// ============================
+async function fetchDamsData(){
+  setDamStatus("Đang tải dữ liệu đập...");
+
+  const fallbackDams = [
+    {name:"Hồ Kẻ Gỗ",lat:18.311,lng:105.85,height:50,volume:345,year:1999,type:"Hồ chứa"},
+    {name:"Hồ Sông Trí",lat:18.35,lng:106.05,height:35,volume:120,year:2004,type:"Thủy điện"},
+    {name:"Hồ Bản Vẽ",lat:19.0,lng:104.88,height:135,volume:1900,year:2010,type:"Thủy điện"},
+    {name:"Hồ Cửa Đạt",lat:19.73,lng:105.33,height:119,volume:1500,year:2012,type:"Thủy lợi - Thủy điện"}
+  ];
+
+  try{
+    const res = await fetch("https://storage.googleapis.com/gdams-public/gdams_vietnam.json", {cache:"no-store"});
+    if(!res.ok) throw new Error("Không tải được từ GDAT");
+
+    const data = await res.json();
+    setDamStatus(`Đã tải ${data.length} đập từ GDAT`);
+    return data;
+  }catch(e){
+    console.warn("GDAT lỗi — dùng fallback.");
+    setDamStatus("Dùng dữ liệu đập dự phòng (offline)");
+    return fallbackDams;
+  }
+}
+
+// ============================
+// 📏 Haversine khoảng cách
+// ============================
+function distanceKm(lat1,lon1,lat2,lon2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// ============================
+// 🗺 HIỂN THỊ ĐẬP TRONG BÁN KÍNH
+// ============================
+async function showNearbyDams(){
+  if(!damLayer) return;
+  damLayer.clearLayers();
+
+  const dams = await fetchDamsData();
+  if(!userLat || !userLng){
+    setDamStatus("Chưa có tọa độ người dùng");
+    return;
+  }
+
+  const nearby = dams
+    .filter(d=>distanceKm(userLat,userLng,d.lat,d.lng) <= radiusDamKm)
+    .map(d=>({...d, distance:distanceKm(userLat,userLng,d.lat,d.lng)}))
+    .sort((a,b)=>a.distance - b.distance);
+
+  if(!nearby.length){
+    document.getElementById("dam-list").innerHTML = "<i>Không có đập nào trong bán kính.</i>";
+    setDamStatus("Không có đập gần");
+    return;
+  }
+
+  let html = "";
+  nearby.forEach(d=>{
+    html += `
+      <div style="margin-bottom:6px;padding:6px 10px;border-left:4px solid #007aff;background:#f6f8ff;border-radius:8px;">
+        <b>${d.name || "Đập không tên"}</b><br>
+        📍 Cách: ${d.distance.toFixed(1)} km<br>
+        🏔 Cao: ${d.height || '--'} m · 💧 Dung tích: ${d.volume || '--'} triệu m³<br>
+        🏗 Năm: ${d.year || 'Không rõ'}<br>
+        ⚙️ Loại: ${d.type || 'Không xác định'}
+      </div>
+    `;
+
+    const icon = L.divIcon({
+      html:`<div style="font-size:18px;">💧</div>`,
+      className:"",
+      iconSize:[20,20],
+      iconAnchor:[10,10]
+    });
+
+    L.marker([d.lat,d.lng],{icon})
+      .addTo(damLayer)
+      .bindPopup(`<b>${d.name}</b><br>${d.distance.toFixed(1)} km`);
+  });
+
+  document.getElementById("dam-list").innerHTML = html;
+
+  L.circle([userLat,userLng],{
+    radius:radiusDamKm*1000,
+    color:'#007aff',
+    fillOpacity:0.08
+  }).addTo(damLayer);
+
+  setDamStatus(`Tìm thấy ${nearby.length} đập`);
+}
+
+// ============================
+// 🌧 GET RAIN
+// ============================
+async function getCurrentRain(lat,lng){
+  try{
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=rain,precipitation&forecast_days=1&timezone=auto`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const rain = data.hourly?.rain?.slice(-1)[0] || 0;
+    document.getElementById("dam-rain-label").innerText = rain;
+    return rain;
+  }catch(e){
+    document.getElementById("dam-rain-label").innerText = "Lỗi";
+    return 0;
+  }
+}
+
+// ============================
+// 🏔 DEM ELEVATION (OFFLINE ƯU TIÊN DEM HÀ TĨNH + 150KM)
+// ============================
+
+// DEM offline toàn tỉnh Hà Tĩnh (chi tiết) & vùng bán kính 150km (rộng)
+let demHatinh = {};
+let demHatinh150 = {};
+let demReady = false;
+
+// Tải DEM offline từ thư mục ./dem (hãy đảm bảo đã upload đúng 2 file JSON)
+async function loadOfflineDEM(){
+  try{
+    const r1 = await fetch("./dem/hatinh_30m_0p001.json");
+    demHatinh = await r1.json();
+    console.log("✅ DEM Hà Tĩnh 30m loaded:", Object.keys(demHatinh).length, "điểm");
+  }catch(e){
+    console.error("Lỗi load DEM Hà Tĩnh:", e);
+  }
+
+  try{
+    const r2 = await fetch("./dem/hatinh_150km_0p003.json");
+    demHatinh150 = await r2.json();
+    console.log("✅ DEM 150km loaded:", Object.keys(demHatinh150).length, "điểm");
+  }catch(e){
+    console.error("Lỗi load DEM 150km:", e);
+  }
+  demReady = true;
+}
+
+// Lấy độ cao từ DEM offline (trả về null nếu không có)
+function getElevationFromDEM(lat,lng){
+  const key = lat.toFixed(3) + "," + lng.toFixed(3);
+
+  if(demHatinh && demHatinh[key] !== undefined){
+    return demHatinh[key];
+  }
+  if(demHatinh150 && demHatinh150[key] !== undefined){
+    return demHatinh150[key];
+  }
+  return null;
+}
+
+// Hàm lấy độ cao ưu tiên DEM offline, nếu không có mới fallback sang API (nếu cần)
+async function getElevation(lat,lng){
+  try{
+    let elev = null;
+
+    // 1) Ưu tiên DEM offline
+    if(demReady){
+      elev = getElevationFromDEM(lat,lng);
+    }
+
+    // 2) Nếu DEM chưa có hoặc ngoài vùng DEM → có thể fallback online
+    if(elev === null){
+      // Nếu bạn muốn dùng hoàn toàn offline, có thể bỏ hẳn đoạn fetch dưới:
+      const res = await fetch(`https://api.opentopodata.org/v1/srtm90m?locations=${lat},${lng}`);
+      const data = await res.json();
+      elev = data.results?.[0]?.elevation ?? 0;
+    }
+
+    const lbl = document.getElementById("dam-elev-label");
+    if(lbl) lbl.innerText = elev.toFixed(1);
+    return elev;
+  }catch(e){
+    const lbl = document.getElementById("dam-elev-label");
+    if(lbl) lbl.innerText = "--";
+    console.error("Lỗi getElevation:", e);
+    return 0;
+  }
+}
+
+// ============================
+// 🧠 PHÂN TÍCH RỦI RO
+// ============================
+async function analyzeRiskAuto(){
+  if(!userLat || !userLng){
+    alert("Hãy chọn vị trí ở trang 1 trước.");
+    return;
+  }
+
+  setDamStatus("AI đang phân tích...");
+
+  const dams = await fetchDamsData();
+  const nearby = dams.filter(d=>distanceKm(userLat,userLng,d.lat,d.lng)<=radiusDamKm);
+  const rain = await getCurrentRain(userLat,userLng);
+  const elev = await getElevation(userLat,userLng);
+  const sound = document.getElementById("alert-sound");
+
+  let riskLevel = "🟢 An toàn";
+  let color = "#28a745";
+
+  if(rain > 120 && elev < 40 && nearby.length>=1){
+    riskLevel = "🚨 Nguy cơ cao (mưa cực lớn + địa hình thấp + gần đập)";
+    color = "#d32f2f";
+    sound.play();
+  }
+  else if(rain > 80 && elev < 60){
+    riskLevel = "🟠 Nguy cơ trung bình (mưa lớn + địa hình thấp)";
+    color = "#f39c12";
+  }
+  else if(rain > 40 && nearby.length>=2){
+    riskLevel = "🟡 Theo dõi (mưa nhiều + nhiều đập gần)";
+    color = "#ffb300";
+  }
+
+  const label = document.getElementById("dam-risk-label");
+  label.innerText = riskLevel;
+  label.style.color = color;
+
+  setDamStatus("Phân tích hoàn tất");
+}
+</script>
+
+
+<!-- ========================
+     SOS MODAL
+     ======================== -->
+<div id="sos-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#ffffff;border-radius:18px;padding:18px;max-width:380px;width:92%;box-shadow:0 10px 30px rgba(0,0,0,0.35);">
+    <h3>🚨 Gửi tín hiệu SOS</h3>
+    <p class="small">Thông tin này được dùng để hỗ trợ lực lượng cứu hộ khi có thiên tai (mô phỏng trong phiên bản thử nghiệm).</p>
+
+    <label class="small">Họ và tên:</label>
+    <input id="sos-name" placeholder="VD: Nguyễn Văn A" style="width:100%;margin:4px 0 8px 0;padding:8px 10px;border-radius:10px;border:1px solid #cfd7e4;">
+
+    <label class="small">Số điện thoại:</label>
+    <input id="sos-phone" placeholder="VD: 09xx..." style="width:100%;margin:4px 0 8px 0;padding:8px 10px;border-radius:10px;border:1px solid #cfd7e4;">
+
+    <label class="small">Mức độ:</label>
+    <select id="sos-level" style="width:100%;margin:4px 0 8px 0;padding:8px 10px;border-radius:10px;border:1px solid #cfd7e4;">
+      <option value="high">🚨 Nguy hiểm cao</option>
+      <option value="medium">⚠️ Cần hỗ trợ</option>
+      <option value="low">✅ An toàn, cần theo dõi</option>
+    </select>
+
+    <label class="small">Ghi chú (tuỳ chọn):</label>
+    <textarea id="sos-note" rows="2" placeholder="VD: Nhà em đang bị ngập, có người già..." style="width:100%;margin:4px 0 8px 0;padding:8px 10px;border-radius:10px;border:1px solid #cfd7e4;resize:vertical;"></textarea>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
+      <button class="gray" onclick="closeSOSForm()">Hủy</button>
+      <button class="danger" onclick="submitSOS()">Gửi SOS</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+// ==========================================
+// 🆘 RESCUE HUB — BẢN ĐỒ CỨU HỘ & SOS
+// ==========================================
+
+let sosReports = [];
+let mapRescue = null;
+let sosLayer = null;
+
+// Đọc / ghi SOS vào localStorage
+function loadSOSFromStorage(){
+  try{
+    const raw = localStorage.getItem("sosReports");
+    sosReports = raw ? JSON.parse(raw) : [];
+    if(!Array.isArray(sosReports)) sosReports = [];
+  }catch(e){
+    sosReports = [];
+  }
+}
+
+function saveSOSToStorage(){
+  try{
+    localStorage.setItem("sosReports", JSON.stringify(sosReports));
+  }catch(e){}
+}
+
+function setRescueStatus(t){
+  const el = document.getElementById("status-rescue");
+  if(el) el.innerText = t;
+}
+
+// Mở / đóng modal SOS
+function openSOSForm(){
+  if(!currentLat || !currentLng){
+    alert("Vui lòng chọn vị trí (GPS hoặc nhập tọa độ) trước khi gửi SOS.");
+    return;
+  }
+  const modal = document.getElementById("sos-modal");
+  if(!modal) return;
+
+  // gợi ý tên / sđt từ localStorage (nếu có)
+  try{
+    const profileRaw = localStorage.getItem("userProfile");
+    if(profileRaw){
+      const p = JSON.parse(profileRaw);
+      if(p.name) document.getElementById("sos-name").value = p.name;
+      if(p.phone) document.getElementById("sos-phone").value = p.phone;
+    }
+  }catch(e){}
+
+  modal.style.display = "flex";
+}
+
+function closeSOSForm(){
+  const modal = document.getElementById("sos-modal");
+  if(modal) modal.style.display = "none";
+}
+
+function submitSOS(){
+  const nameEl = document.getElementById("sos-name");
+  const phoneEl = document.getElementById("sos-phone");
+  const levelEl = document.getElementById("sos-level");
+  const noteEl = document.getElementById("sos-note");
+
+  const name = nameEl.value.trim();
+  const phone = phoneEl.value.trim();
+  const level = levelEl.value;
+  const note = noteEl.value.trim();
+
+  if(!name || !phone){
+    alert("Vui lòng nhập đầy đủ họ tên và số điện thoại.");
+    return;
+  }
+  if(!currentLat || !currentLng){
+    alert("Chưa có vị trí hiện tại. Hãy bật GPS hoặc nhập tọa độ rồi bấm Hiển thị.");
+    return;
+  }
+
+  // Lưu hồ sơ cơ bản để lần sau gợi ý
+  try{
+    localStorage.setItem("userProfile", JSON.stringify({name, phone}));
+  }catch(e){}
+
+  const report = {
+    id: Date.now(),
+    name,
+    phone,
+    level,
+    note,
+    lat: currentLat,
+    lng: currentLng,
+    time: new Date().toISOString()
+  };
+
+  loadSOSFromStorage();
+  sosReports.push(report);
+  saveSOSToStorage();
+
+  // Cập nhật map & danh sách nếu đang ở trang 3
+  renderSOSOnMap();
+  renderSOSList();
+
+  closeSOSForm();
+  alert("Đã gửi tín hiệu SOS (mô phỏng). Trong triển khai thật, dữ liệu này sẽ gửi tới trung tâm cứu hộ.");
+}
+
+// Khởi tạo map Rescue
+function initOrUpdateRescueMap(){
+  loadSOSFromStorage();
+
+  const targetLat = currentLat || parseFloat(localStorage.getItem("userLat")) || 18.3;
+  const targetLng = currentLng || parseFloat(localStorage.getItem("userLng")) || 105.7;
+
+  if(!mapRescue){
+    mapRescue = L.map("map-rescue").setView([targetLat, targetLng], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      maxZoom: 18,
+      attribution: "© OpenStreetMap"
+    }).addTo(mapRescue);
+    sosLayer = L.layerGroup().addTo(mapRescue);
+  } else {
+    mapRescue.setView([targetLat, targetLng], 11);
+    mapRescue.invalidateSize();
+  }
+
+  renderSOSOnMap();
+  renderSOSList();
+}
+
+// Render marker lên bản đồ
+function renderSOSOnMap(){
+  if(!mapRescue || !sosLayer) return;
+
+  sosLayer.clearLayers();
+
+  sosReports.forEach(r => {
+    const icon = L.divIcon({
+      html: `<div style="font-size:18px;">${
+        r.level === "high" ? "🟥" : (r.level === "medium" ? "🟧" : "🟩")
+      }</div>`,
+      className: "",
+      iconSize:[20,20],
+      iconAnchor:[10,10]
+    });
+
+    L.marker([r.lat, r.lng], {icon})
+      .addTo(sosLayer)
+      .bindPopup(
+        `<b>${r.name}</b><br>` +
+        `📱 ${r.phone}<br>` +
+        `📍 ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}<br>` +
+        `⏱ ${new Date(r.time).toLocaleString("vi-VN")}<br>` +
+        (r.note ? `📝 ${r.note}` : "")
+      );
+  });
+
+  setRescueStatus(`Hiển thị ${sosReports.length} tín hiệu SOS (mô phỏng).`);
+}
+
+// Render danh sách SOS
+function renderSOSList(){
+  const wrap = document.getElementById("sos-list");
+  if(!wrap) return;
+
+  if(!sosReports.length){
+    wrap.innerHTML = "<i>Chưa có tín hiệu SOS nào.</i>";
+    return;
+  }
+
+  let html = "";
+  const sorted = [...sosReports].sort((a,b) => b.id - a.id);
+  sorted.forEach(r => {
+    let label =
+      r.level === "high" ? "🚨 Nguy hiểm cao" :
+      r.level === "medium" ? "⚠️ Cần hỗ trợ" : "✅ An toàn / theo dõi";
+
+    html += `
+      <div style="margin-bottom:8px;padding:8px 10px;border-radius:10px;border-left:4px solid ${
+        r.level === "high" ? "#e53935" : (r.level === "medium" ? "#fb8c00" : "#43a047")
+      };background:#f7f9ff;">
+        <b>${r.name}</b> · <span style="font-size:13px;">${label}</span><br>
+        📱 ${r.phone}<br>
+        📍 ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}<br>
+        ⏱ ${new Date(r.time).toLocaleString("vi-VN")}<br>
+        ${r.note ? ("📝 " + r.note) : ""}
+      </div>
+    `;
+  });
+
+  wrap.innerHTML = html;
+}
+
+// Nút refresh trên trang Rescue Hub
+function refreshSOSData(){
+  loadSOSFromStorage();
+  renderSOSOnMap();
+  renderSOSList();
+  setRescueStatus("Đã cập nhật từ bộ nhớ cục bộ.");
+}
+
+// Tự load SOS khi trang bắt đầu
+document.addEventListener("DOMContentLoaded", function(){
+  loadSOSFromStorage();
+  loadOfflineDEM();
+});
+
+// ==========================================
+// ⏱ FLOOD TIMELINE 4D PRO
+// ==========================================
+
+let floodTimelineFrames = [];
+let floodTimelineTimer = null;
+let floodTimelineIndex = 0;
+
+function clearFloodTimelineLayers(){
+  if(!floodTimelineFrames.length) return;
+  floodTimelineFrames.forEach(frame=>{
+    frame.forEach(layer=>{
+      if(map.hasLayer(layer)) map.removeLayer(layer);
+    });
+  });
+  floodTimelineFrames = [];
+}
+
+async function startFloodTimeline(){
+  if(!currentLat || !currentLng){
+    alert("Chưa có vị trí. Hãy chọn GPS hoặc nhập tọa độ trước.");
+    return;
+  }
+
+  // dừng phiên cũ nếu có
+  stopFloodTimeline();
+  clearFloodTimelineLayers();
+
+  const label = document.getElementById("flood-timeline-label");
+  const stepLabel = document.getElementById("flood-timeline-step");
+  if(label) label.innerText = "Đang tính toán DEM và mô phỏng lan nước...";
+  if(stepLabel) stepLabel.innerText = "-";
+
+  // Lấy DEM tại tâm và 8 hướng (giống Flow V2 nhưng bước lớn hơn)
+  const dirs = [
+    {name:"Bắc",      lat: 0.02,  lng: 0},
+    {name:"Đông Bắc", lat: 0.014, lng: 0.014},
+    {name:"Đông",     lat: 0,     lng: 0.02},
+    {name:"Đông Nam", lat:-0.014, lng: 0.014},
+    {name:"Nam",      lat:-0.02,  lng: 0},
+    {name:"Tây Nam",  lat:-0.014, lng:-0.014},
+    {name:"Tây",      lat: 0,     lng:-0.02},
+    {name:"Tây Bắc",  lat: 0.014, lng:-0.014},
+  ];
+
+  let centerElev = 0;
+  try{
+    const resC = await fetch(`https://api.opentopodata.org/v1/srtm90m?locations=${currentLat},${currentLng}`);
+    const dataC = await resC.json();
+    centerElev = dataC.results?.[0]?.elevation ?? 0;
+  }catch(e){ centerElev = 0; }
+
+  const samples = [];
+  for(const d of dirs){
+    const lat2 = currentLat + d.lat;
+    const lng2 = currentLng + d.lng;
+    try{
+      const res = await fetch(`https://api.opentopodata.org/v1/srtm90m?locations=${lat2},${lng2}`);
+      const data = await res.json();
+      const elev = data.results?.[0]?.elevation ?? null;
+      if(elev !== null){
+        samples.push({dir:d.name, lat:lat2, lng:lng2, elev});
+      }
+    }catch(e){}
+  }
+
+  if(!samples.length){
+    if(label) label.innerText = "Không lấy được DEM để mô phỏng.";
+    return;
+  }
+
+  // Xác định các hướng nước có xu hướng chảy tới (thấp hơn tâm)
+  const flows = samples
+    .filter(s => s.elev < centerElev)
+    .map(s => ({
+      ...s,
+      slope: centerElev - s.elev
+    }))
+    .sort((a,b)=> b.slope - a.slope);
+
+  if(!flows.length){
+    if(label) label.innerText = "Địa hình cao, nguy cơ lan nước thấp (không có hướng thấp hơn rõ rệt).";
+    return;
+  }
+
+  // Tạo 6 mốc thời gian: 0, 10, 20, 30, 45, 60 phút
+  const timelineMinutes = [0,10,20,30,45,60];
+  floodTimelineFrames = [];
+  const baseRadius = 300; // mét
+
+  timelineMinutes.forEach((min, idxStep)=>{
+    const frameLayers = [];
+
+    // đường tròn lan nước chung quanh tâm
+    const rCommon = baseRadius + min * 20;
+    const circle = L.circle([currentLat, currentLng],{
+      radius: rCommon,
+      color: "#2196f3",
+      fillOpacity: 0.04,
+      weight: 1
+    }).addTo(map);
+    frameLayers.push(circle);
+
+    // các "cánh" lan mạnh theo những hướng dốc lớn
+    flows.forEach((f, i)=>{
+      const weight = 1 + (f.slope / 20); // slope càng lớn nước lan càng nhanh
+      const extra = min * 30 * weight;
+      const rDir = baseRadius/2 + extra;
+
+      const latMid = (currentLat + f.lat)/2;
+      const lngMid = (currentLng + f.lng)/2;
+
+      const cDir = L.circle([latMid, lngMid],{
+        radius: rDir,
+        color: i === 0 ? "#1565c0" : "#42a5f5",
+        fillOpacity: 0.15,
+        weight: 1
+      }).addTo(map);
+      frameLayers.push(cDir);
+    });
+
+    floodTimelineFrames.push(frameLayers);
+  });
+
+  // Bắt đầu play
+  floodTimelineIndex = 0;
+  if(label) label.innerText = "Đang mô phỏng lan nước...";
+  playFloodTimelineStep();
+
+  floodTimelineTimer = setInterval(()=>{
+    floodTimelineIndex = (floodTimelineIndex + 1) % floodTimelineFrames.length;
+    playFloodTimelineStep();
+  }, 1800);
+}
+
+function playFloodTimelineStep(){
+  if(!floodTimelineFrames.length) return;
+
+  // Ẩn tất cả frame
+  floodTimelineFrames.forEach((frame, i)=>{
+    frame.forEach(layer=>{
+      if(i === floodTimelineIndex){
+        if(!map.hasLayer(layer)) map.addLayer(layer);
+      } else {
+        if(map.hasLayer(layer)) map.removeLayer(layer);
+      }
+    });
+  });
+
+  const label = document.getElementById("flood-timeline-label");
+  const stepLabel = document.getElementById("flood-timeline-step");
+  const timelineMinutes = [0,10,20,30,45,60];
+
+  if(label){
+    label.innerText = `Khung mô phỏng phút thứ ${timelineMinutes[floodTimelineIndex]} (ước tính).`;
+  }
+  if(stepLabel){
+    stepLabel.innerText = `${timelineMinutes[floodTimelineIndex]} phút`;
+  }
+}
+
+function stopFloodTimeline(){
+  if(floodTimelineTimer){
+    clearInterval(floodTimelineTimer);
+    floodTimelineTimer = null;
+  }
+  clearFloodTimelineLayers();
+  const label = document.getElementById("flood-timeline-label");
+  const stepLabel = document.getElementById("flood-timeline-step");
+  if(label) label.innerText = "Đã dừng mô phỏng.";
+  if(stepLabel) stepLabel.innerText = "-";
+}
+
+// ==========================================
+// 🧠 SAFEROUTE PRO V3 — ĐÁNH GIÁ NHIỀU TUYẾN
+// ==========================================
+
+async function computeSafeRouteProV3(){
+  if(!currentLat || !currentLng){
+    alert("Chưa có vị trí. Hãy chọn tọa độ trước.");
+    return;
+  }
+
+  setStatus("🧠 AI đang tính toán 3 tuyến đường...");
+
+  // tạo 3 điểm đích theo 3 hướng khác nhau trong bán kính radiusKm
+  const R = radiusKm / 111; // ~ độ
+  const targets = [
+    {name:"Đích A (Bắc)", lat: currentLat + R, lng: currentLng},
+    {name:"Đích B (Đông)", lat: currentLat, lng: currentLng + R},
+    {name:"Đích C (Tây)", lat: currentLat, lng: currentLng - R}
+  ];
+
+  const routes = [];
+  for(const t of targets){
+    try{
+      const url = `https://router.project-osrm.org/route/v1/driving/${currentLng},${currentLat};${t.lng},${t.lat}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(data.routes && data.routes[0]){
+        routes.push({
+          target: t,
+          osrm: data.routes[0]
+        });
+      }
+    }catch(e){}
+  }
+
+  if(!routes.length){
+    setStatus("⚠️ Không lấy được dữ liệu OSRM. Thử lại sau.");
+    return;
+  }
+
+  // Xoá tuyến cũ trên bản đồ (nếu có)
+  if(safeRouteLine){
+    map.removeLayer(safeRouteLine);
+    safeRouteLine = null;
+  }
+
+  // Đánh giá từng tuyến: độ cao, chiều dài ước tính rủi ro
+  const scored = [];
+  for(const r of routes){
+    const coords = r.osrm.geometry.coordinates; // [lng,lat]
+    const lengthM = r.osrm.distance || 0;
+
+    // mẫu DEM: lấy 5 điểm cách đều trên tuyến
+    const sampleIdx = [];
+    const n = coords.length;
+    const samplesCount = Math.min(5, n);
+    for(let i=0;i<samplesCount;i++){
+      sampleIdx.push(Math.floor(i*(n-1)/(samplesCount-1)));
+    }
+
+    let elevSum = 0;
+    let elevMin = Infinity;
+    let elevCount = 0;
+
+    for(const idxPt of sampleIdx){
+      const [lng, lat] = coords[idxPt];
+      try{
+        const res = await fetch(`https://api.opentopodata.org/v1/srtm90m?locations=${lat},${lng}`);
+        const data = await res.json();
+        const elev = data.results?.[0]?.elevation ?? null;
+        if(elev !== null){
+          elevSum += elev;
+          elevMin = Math.min(elevMin, elev);
+          elevCount++;
+        }
+      }catch(e){}
+    }
+
+    const elevAvg = elevCount ? elevSum / elevCount : 0;
+
+    // Chấm điểm
+    let scoreHeight = 0;
+    if(elevAvg >= 80) scoreHeight = 40;
+    else if(elevAvg >= 60) scoreHeight = 32;
+    else if(elevAvg >= 40) scoreHeight = 24;
+    else if(elevAvg >= 20) scoreHeight = 15;
+    else scoreHeight = 8;
+
+    // điểm chiều dài: ngắn hơn thì điểm cao hơn
+    let scoreLength = 0;
+    const lengthKm = lengthM / 1000;
+    if(lengthKm <= radiusKm * 1.2) scoreLength = 20;
+    else if(lengthKm <= radiusKm * 1.6) scoreLength = 12;
+    else scoreLength = 6;
+
+    // tạm thời giả lập "tránh ngập & sông" bằng cách ưu tiên tuyến có độ cao tối thiểu tốt
+    let scoreFlood = 0;
+    if(elevMin >= 60) scoreFlood = 25;
+    else if(elevMin >= 40) scoreFlood = 18;
+    else if(elevMin >= 20) scoreFlood = 10;
+    else scoreFlood = 4;
+
+    // điểm tổng
+    const totalScore = scoreHeight + scoreLength + scoreFlood;
+
+    scored.push({
+      route: r,
+      elevAvg,
+      elevMin: elevMin === Infinity ? 0 : elevMin,
+      lengthKm,
+      scoreHeight,
+      scoreLength,
+      scoreFlood,
+      totalScore
+    });
+  }
+
+  if(!scored.length){
+    setStatus("⚠️ Không tính được điểm an toàn tuyến đường.");
+    return;
+  }
+
+  scored.sort((a,b)=> b.totalScore - a.totalScore);
+  const best = scored[0];
+
+  // Vẽ cả 3 tuyến, tuyến tốt nhất tô đậm
+  scored.forEach((s, idx)=>{
+    const color = idx === 0 ? "#007aff" : "#90caf9";
+    const weight = idx === 0 ? 6 : 3;
+    const line = L.geoJSON(s.route.osrm.geometry, {color, weight}).addTo(map);
+    if(idx === 0){
+      safeRouteLine = line;
+      map.fitBounds(line.getBounds());
+    }
+  });
+
+  // Gửi kết quả ra hộp AI
+  const aiBox = document.getElementById("ai-result");
+  if(aiBox){
+    let html = "🧠 <b>Kết quả SafeRoute Pro V3 (3 tuyến):</b><br>";
+    scored.forEach((s, idx)=>{
+      html += `• ${s.route.target.name}: `
+           + `Điểm tổng <b>${s.totalScore.toFixed(1)}</b> `
+           + `(cao TB: ${s.elevAvg.toFixed(1)} m, thấp nhất: ${s.elevMin.toFixed(1)} m, `
+           + `chiều dài: ${s.lengthKm.toFixed(2)} km)<br>`;
+    });
+    html += `<br>👉 AI chọn: <b>${best.route.target.name}</b> là tuyến an toàn nhất.`;
+    aiBox.innerHTML = html;
+  }
+
+  setStatus("✅ SafeRoute Pro V3 đã chọn tuyến đường an toàn nhất (mô phỏng).");
+}
+</script>
+</body>
+
+</html>

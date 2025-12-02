@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>SafeRoute AI – Dashboard Thời tiết & Thiên tai</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --bg:#f3f5fb;
+  --bg-card:#ffffff;
+  --bg-box:#f5f7ff;
+  --text:#111827;
+  --text-muted:#6b7280;
+  --primary:#0051b5;
+  --primary-soft:#e0e7ff;
+  --border-soft:#d1d5db;
+  --shadow-soft:0 2px 8px rgba(0,0,0,0.08);
+}
+body.dark{
+  --bg:#020617;
+  --bg-card:#020617;
+  --bg-box:#0b1120;
+  --text:#e5e7eb;
+  --text-muted:#9ca3af;
+  --primary:#38bdf8;
+  --primary-soft:#082f49;
+  --border-soft:#1f2937;
+  --shadow-soft:0 2px 12px rgba(0,0,0,0.6);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;font-family:'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+}
+
+/* TOPBAR */
+.topbar{
+  background:var(--primary);color:#fff;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 16px;position:sticky;top:0;z-index:20;
+  box-shadow:0 2px 10px rgba(0,0,0,0.35);
+}
+.brand{
+  font-size:20px;font-weight:700;
+}
+.brand span{
+  font-size:12px;opacity:.9;margin-left:6px;
+}
+.top-actions{display:flex;gap:8px;align-items:center;}
+.btn-chip{
+  border-radius:999px;border:1px solid rgba(255,255,255,0.4);
+  padding:4px 10px;font-size:13px;background:rgba(15,23,42,0.2);
+  color:#fff;cursor:pointer;
+}
+.btn-chip:hover{background:rgba(15,23,42,0.35);}
+
+/* LAYOUT */
+.layout{
+  max-width:1240px;margin:14px auto;
+  display:grid;grid-template-columns:300px minmax(0,1fr);
+  gap:16px;padding:0 12px;
+}
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr;}
+}
+
+/* SIDEBAR */
+.box{
+  background:var(--bg-box);
+  border-radius:14px;
+  padding:14px 14px 12px;
+  border:1px solid var(--border-soft);
+  box-shadow:var(--shadow-soft);
+  margin-bottom:14px;
+}
+.box h2{
+  font-size:16px;margin:0 0 8px;
+}
+.input{
+  width:100%;padding:8px 10px;border-radius:10px;
+  border:1px solid var(--border-soft);outline:none;
+  background:var(--bg-card);color:var(--text);
+}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.chip{
+  border-radius:999px;border:1px solid var(--border-soft);
+  padding:4px 10px;font-size:13px;
+  background:var(--bg-card);color:var(--text);
+  cursor:pointer;
+}
+.chip:hover{background:var(--primary-soft);}
+.chip.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+/* AI SUMMARY */
+.ai-summary-list{
+  font-size:13px;margin:4px 0 0;padding-left:18px;
+}
+.ai-summary-list li{margin-bottom:3px;}
+.btn-main{
+  margin-top:6px;
+  background:var(--primary);color:#fff;border:none;
+  border-radius:8px;font-size:13px;padding:6px 10px;
+  cursor:pointer;
+}
+.btn-main:hover{opacity:.92;}
+.small{font-size:11px;color:var(--text-muted);margin-top:4px;display:block;}
+
+/* STORM BANNER */
+.storm{
+  border-left:4px solid #ef4444;
+}
+.hidden{display:none;}
+
+/* CONTENT */
+.content{min-width:0;}
+.section-title{
+  font-size:18px;margin:8px 0 4px;
+  border-left:4px solid var(--primary);
+  padding-left:6px;
+}
+.filter-row{
+  display:flex;flex-wrap:wrap;gap:8px;
+  align-items:center;margin-bottom:4px;font-size:13px;
+}
+.select{
+  padding:5px 8px;border-radius:8px;
+  border:1px solid var(--border-soft);
+  background:var(--bg-card);color:var(--text);
+}
+
+/* CARDS */
+.news-list{margin-bottom:18px;}
+.card{
+  background:var(--bg-card);
+  border-radius:14px;padding:12px 14px;
+  border:1px solid var(--border-soft);
+  box-shadow:var(--shadow-soft);
+  margin-bottom:8px;
+}
+.card.ht{border-left:4px solid #dc2626;}
+.card.mt{border-left:4px solid #f97316;}
+.card.vn{border-left:4px solid #22c55e;}
+.card.qt{border-left:4px solid #8b5cf6;}
+
+.card h3{margin:0 0 4px;font-size:16px;}
+.meta{
+  font-size:12px;color:var(--text-muted);margin-bottom:4px;
+}
+.badge{
+  display:inline-block;padding:2px 7px;border-radius:999px;
+  font-size:11px;margin-right:4px;
+}
+.b-loc{background:var(--primary-soft);}
+.b-score-low{background:#dcfce7;color:#166534;}
+.b-score-med{background:#fef9c3;color:#92400e;}
+.b-score-high{background:#fee2e2;color:#b91c1c;}
+
+.card p{font-size:13px;margin:6px 0 8px;}
+.btn-link{
+  font-size:13px;padding:5px 9px;border-radius:6px;
+  border:none;background:var(--primary);color:#fff;
+  cursor:pointer;
+}
+.btn-link:hover{opacity:.93;}
+
+/* FOOTER */
+.footer{
+  text-align:center;font-size:12px;
+  color:var(--text-muted);padding:16px 8px 20px;
+}
+
+/* CHAT ASSISTANT */
+.chat-toggle{
+  position:fixed;right:18px;bottom:18px;z-index:40;
+  width:42px;height:42px;border-radius:999px;
+  border:none;background:var(--primary);color:#fff;
+  box-shadow:0 4px 12px rgba(0,0,0,0.35);
+  cursor:pointer;font-size:20px;
+}
+.chat-panel{
+  position:fixed;right:18px;bottom:72px;z-index:40;
+  width:310px;max-height:420px;
+  background:var(--bg-card);
+  border-radius:16px;
+  border:1px solid var(--border-soft);
+  box-shadow:0 6px 20px rgba(0,0,0,0.45);
+  display:none;flex-direction:column;
+}
+.chat-header{
+  padding:8px 10px;border-bottom:1px solid var(--border-soft);
+  font-size:13px;font-weight:600;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.chat-body{
+  padding:8px;overflow-y:auto;flex:1;
+  font-size:13px;
+}
+.chat-msg{margin-bottom:6px;}
+.chat-msg.me{text-align:right;}
+.chat-msg span{
+  display:inline-block;padding:4px 8px;border-radius:10px;
+}
+.chat-msg.me span{
+  background:var(--primary);color:#fff;
+}
+.chat-msg.bot span{
+  background:var(--bg-box);color:var(--text);
+}
+.chat-input-row{
+  border-top:1px solid var(--border-soft);
+  padding:6px;display:flex;gap:6px;
+}
+.chat-input-row input{
+  flex:1;border-radius:999px;border:1px solid var(--border-soft);
+  padding:5px 9px;font-size:13px;background:var(--bg-card);color:var(--text);
+}
+.chat-input-row button{
+  border-radius:999px;border:none;background:var(--primary);color:#fff;
+  padding:5px 10px;font-size:13px;cursor:pointer;
+}
+</style>
+</head>
+
+<body><button onclick="location.href='index.html'" style="position:fixed;top:10px;left:10px;z-index:9999;">⬅ Trang chính</button>
+
+<header class="topbar">
+  <div class="brand">
+    🌧️ SafeRoute AI
+    <span>Dashboard Thời tiết & Thiên tai</span>
+  </div>
+  <div class="top-actions">
+    <button id="darkToggle" class="btn-chip">🌙 Dark</button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- SIDEBAR LEFT -->
+  <aside class="sidebar">
+
+    <section class="box">
+      <h2>🔍 Tìm kiếm & lọc</h2>
+      <input id="searchInput" class="input" placeholder="Nhập: bão, lũ, Hà Tĩnh, Hương Khê...">
+      <div class="chips">
+        <button class="chip filter-chip" data-key="">Tất cả</button>
+        <button class="chip filter-chip" data-key="bão">Bão</button>
+        <button class="chip filter-chip" data-key="lũ">Lũ</button>
+        <button class="chip filter-chip" data-key="mưa lớn">Mưa lớn</button>
+        <button class="chip filter-chip" data-key="áp thấp">Áp thấp</button>
+        <button class="chip filter-chip" data-key="sạt lở">Sạt lở</button>
+      </div>
+    </section>
+
+    <section class="box">
+      <h2>🧠 AI Tổng hợp 1 phút</h2>
+      <button id="btnSummary" class="btn-main">▶ Tạo tổng hợp</button>
+      <button id="btnSpeakSummary" class="btn-main" style="margin-left:4px;">🔊 Nghe</button>
+      <ul id="summaryList" class="ai-summary-list"></ul>
+      <span class="small">AI mini dựa trên tin 24h gần nhất, không sử dụng API bên ngoài.</span>
+    </section>
+
+    <section id="stormBanner" class="box storm hidden">
+      <h2>🚨 Tin bão / lũ nổi bật</h2>
+      <p id="stormText" style="font-size:13px;margin:4px 0 8px;">Đang quét dữ liệu...</p>
+      <button id="btnStormJump" class="btn-main" style="width:100%;">👀 Xem tin nguy hiểm nhất</button>
+    </section>
+
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <section class="content">
+
+    <div class="filter-row">
+      <span>📍 Lọc theo huyện/xã (AI nhận diện):</span>
+      <select id="locationFilter" class="select">
+        <option value="">Tất cả địa phương</option>
+        <option value="ha-tinh">Hà Tĩnh (toàn tỉnh)</option>
+        <option value="huong-khe">Hương Khê</option>
+        <option value="ky-anh">Kỳ Anh</option>
+        <option value="duc-tho">Đức Thọ</option>
+        <option value="hong-linh">Hồng Lĩnh</option>
+        <option value="thach-ha">Thạch Hà</option>
+        <option value="nghe-an">Nghệ An</option>
+        <option value="quang-binh">Quảng Bình</option>
+        <option value="quang-tri">Quảng Trị</option>
+        <option value="thua-thien-hue">Thừa Thiên Huế</option>
+        <option value="quang-nam">Quảng Nam</option>
+        <option value="mien-trung">Miền Trung (khác)</option>
+      </select>
+    </div>
+
+    <h2 class="section-title">📍 Hà Tĩnh</h2>
+    <div id="newsHT" class="news-list"></div>
+
+    <h2 class="section-title">⛰️ Miền Trung</h2>
+    <div id="newsMT" class="news-list"></div>
+
+    <h2 class="section-title">🇻🇳 Việt Nam</h2>
+    <div id="newsVN" class="news-list"></div>
+
+    <h2 class="section-title">🌍 Quốc tế</h2>
+    <div id="newsQT" class="news-list"></div>
+
+  </section>
+</main>
+
+<footer class="footer">
+  © 2025 SafeRoute AI — Thử nghiệm Dashboard Thời tiết & Thiên tai (Mini AI offline)
+</footer>
+
+<!-- CHAT ASSISTANT -->
+<button id="chatToggle" class="chat-toggle">💬</button>
+<div id="chatPanel" class="chat-panel">
+  <div class="chat-header">
+    <span>Trợ lý thời tiết SafeRoute</span>
+    <button id="chatClose" class="btn-chip" style="border:none;background:transparent;color:var(--text);">✕</button>
+  </div>
+  <div id="chatBody" class="chat-body"></div>
+  <div class="chat-input-row">
+    <input id="chatInput" placeholder="Hỏi: Hà Tĩnh có mưa không?">
+    <button id="chatSend">Gửi</button>
+  </div>
+</div>
+<script>
+// ==============================
+// CẤU HÌNH RSS
+// ==============================
+const FEED_HT = [
+  ["Báo Hà Tĩnh", "https://baohatinh.vn/rss/xa-hoi-5.rss"],
+  ["HTTV", "https://www.httv.vn/rss/thoi-su"],
+  ["VOV Miền Trung", "https://vov.vn/rss/mien-trung-314.rss"]
+];
+const FEED_MT = [
+  ["VNE Miền Trung", "https://vnexpress.net/rss/mien-trung.rss"],
+  ["Vietnamnet MT", "https://vietnamnet.vn/rss/mien-trung.rss"],
+  ["Quảng Bình", "https://baoquangbinh.vn/rss/thoi-su/"],
+  ["Quảng Trị", "https://baoquangtri.vn/rss/thoi-su.rss"],
+  ["Huế", "https://baothuathienhue.vn/rss/thoi-su.rss"]
+];
+const FEED_VN = [
+  ["VNE Môi trường", "https://vnexpress.net/rss/thoi-su/moi-truong.rss"],
+  ["Tuổi Trẻ MT", "https://tuoitre.vn/rss/thoi-su/moi-truong.rss"],
+  ["Zing Thời tiết", "https://zingnews.vn/rss/thoi-tiet.xml"]
+];
+const FEED_QT = [
+  ["NASA Earth", "https://earthobservatory.nasa.gov/feeds/earth-observatory.rss"],
+  ["Reuters Climate", "https://www.reuters.com/rssFeed/climate.xml"]
+];
+
+// Từ khóa nhận diện bão/lũ
+const STORM_KEYWORDS = [
+  "bão","áp thấp","lũ","lụt","mưa lớn","sạt lở",
+  "ngập","giông lốc","dông lốc","flood","storm","typhoon","tropical"
+];
+
+let allCards = [];       // DOM
+let allArticles = [];    // dữ liệu
+let stormArticles = [];  // các tin nguy hiểm
+let summaryText = "";    // lưu bản tổng hợp AI
+
+// ==============================
+// DARK MODE
+// ==============================
+function initDarkMode(){
+  if(window.matchMedia("(prefers-color-scheme: dark)").matches){
+    document.body.classList.add("dark");
+  }
+  const btn = document.getElementById("darkToggle");
+  const sync = () => btn.textContent =
+    document.body.classList.contains("dark") ? "☀️ Light" : "🌙 Dark";
+  btn.onclick = () => {
+    document.body.classList.toggle("dark");
+    sync();
+  };
+  sync();
+}
+
+// ==============================
+// LOAD RSS (RSS2JSON – nhanh, không lỗi CORS)
+// ==============================
+async function loadRSS(url){
+  const api = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(url);
+  try {
+    const r = await fetch(api);
+    const j = await r.json();
+    return j.items || [];
+  } catch(e){
+    console.log("RSS Error:", e);
+    return [];
+  }
+}
+
+// ==============================
+// AI MINI — NHẬN DIỆN HUYỆN/XÃ
+// ==============================
+const LOCATION_RULES = [
+  {key:"huong-khe", label:"Hương Khê", patterns:["hương khê"]},
+  {key:"ky-anh", label:"Kỳ Anh", patterns:["kỳ anh"]},
+  {key:"duc-tho", label:"Đức Thọ", patterns:["đức thọ"]},
+  {key:"hong-linh", label:"Hồng Lĩnh", patterns:["hồng lĩnh"]},
+  {key:"thach-ha", label:"Thạch Hà", patterns:["thạch hà"]},
+  {key:"ha-tinh", label:"Hà Tĩnh", patterns:["hà tĩnh"]},
+  {key:"nghe-an", label:"Nghệ An", patterns:["nghệ an"]},
+  {key:"quang-binh", label:"Quảng Bình", patterns:["quảng bình"]},
+  {key:"quang-tri", label:"Quảng Trị", patterns:["quảng trị"]},
+  {key:"thua-thien-hue", label:"Thừa Thiên Huế", patterns:["thừa thiên huế","huế"]},
+  {key:"quang-nam", label:"Quảng Nam", patterns:["quảng nam"]},
+  {key:"mien-trung", label:"Miền Trung", patterns:["miền trung","trung bộ"]}
+];
+
+function detectLocation(text){
+  for(const rule of LOCATION_RULES){
+    for(const p of rule.patterns){
+      if(text.includes(p)) return rule;
+    }
+  }
+  return null;
+}
+
+// ==============================
+// AI MINI — IMPACT SCORE 0–10
+// ==============================
+function computeImpactScore(text){
+  let s = 1;
+  if(text.includes("bão")) s+=4;
+  if(text.includes("áp thấp")) s+=3;
+  if(text.includes("lũ")||text.includes("lụt")) s+=4;
+  if(text.includes("mưa lớn")) s+=2;
+  if(text.includes("mưa rất to")) s+=3;
+  if(text.includes("ngập")) s+=2;
+  if(text.includes("sạt lở")) s+=3;
+  if(text.includes("gió mạnh")) s+=2;
+  if(text.includes("thiệt hại")) s+=2;
+  if(text.includes("tử vong")) s+=3;
+  if(s>10) s=10;
+  return s;
+}
+
+function scoreClass(score){
+  if(score <4) return "b-score-low";
+  if(score <7) return "b-score-med";
+  return "b-score-high";
+}
+
+// ==============================
+// TẠO CARD BÀI BÁO
+// ==============================
+let articleIdCounter = 0;
+function createCard(article, cssClass, container){
+  const card = document.createElement("div");
+  card.className = "card " + cssClass;
+
+  const text = (article.title + " " + article.description).toLowerCase();
+  const loc = detectLocation(text);
+  const locLabel = loc ? loc.label : "Không rõ";
+  const locKey = loc ? loc.key : "";
+
+  const score = computeImpactScore(text);
+  const isStorm = STORM_KEYWORDS.some(k => text.includes(k));
+  const id = articleIdCounter++;
+
+  const dt = article.date.toLocaleString("vi-VN");
+
+  card.dataset.text = text;
+  card.dataset.location = locKey;
+  card.dataset.score = score;
+  card.dataset.articleId = id;
+
+  let riskName = score<4 ? "Thấp" : (score<7 ? "Trung bình" : "Cao");
+
+  card.innerHTML = `
+    <h3>${article.title}</h3>
+    <div class="meta">
+      <span class="badge b-loc">📍 ${locLabel}</span>
+      <span class="badge ${scoreClass(score)}">⚠ ${score}/10 – ${riskName}</span>
+      · 📰 ${article.source}
+      · 🕒 ${dt}
+    </div>
+    <p>${article.summary}</p>
+    <button class="btn-link" onclick="window.open('${article.link}','_blank')">
+      🔗 Xem bài gốc
+    </button>
+  `;
+
+  container.appendChild(card);
+
+  allCards.push(card);
+  allArticles.push({id, ...article, text, locKey, locLabel, score, isStorm });
+
+  if(isStorm || score>=7) stormArticles.push(card);
+}
+
+// ==============================
+// LOAD 1 NHÓM TIN
+// ==============================
+async function loadGroup(feedList, containerId, cssClass, limit){
+  const box = document.getElementById(containerId);
+  box.innerHTML = "<div class='card'>⏳ Đang tải...</div>";
+
+  let items = [];
+  for(const [src,url] of feedList){
+    const rss = await loadRSS(url);
+    rss.slice(0,8).forEach(i=>{
+      const clean = (i.description || "").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
+      items.push({
+        source:src,
+        title:i.title,
+        link:i.link,
+        description:clean,
+        summary:clean.slice(0,220) + "...",
+        date:new Date(i.pubDate || Date.now())
+      });
+    });
+  }
+
+  items.sort((a,b)=>b.date - a.date);
+  items = items.slice(0,limit);
+
+  box.innerHTML="";
+  items.forEach(a=>createCard(a, cssClass, box));
+}
+
+// ==============================
+// SEARCH & FILTER
+// ==============================
+function applyFilters(){
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  const loc = document.getElementById("locationFilter").value;
+  const chip = document.querySelector(".filter-chip.active");
+  const kw = chip ? chip.dataset.key : "";
+
+  allCards.forEach(c=>{
+    let ok=true;
+    if(q && !c.dataset.text.includes(q)) ok=false;
+    if(kw && !c.dataset.text.includes(kw)) ok=false;
+    if(loc && c.dataset.location !== loc) ok=false;
+    c.style.display = ok ? "block":"none";
+  });
+}
+
+function initSearchFilters(){
+  document.getElementById("searchInput").oninput = applyFilters;
+  document.getElementById("locationFilter").onchange = applyFilters;
+
+  document.querySelectorAll(".filter-chip").forEach(btn=>{
+    btn.onclick = ()=>{
+      document.querySelectorAll(".filter-chip").forEach(b=>b.classList.remove("active"));
+      if(btn.dataset.key) btn.classList.add("active");
+      else document.getElementById("searchInput").value="";
+      applyFilters();
+    };
+  });
+}
+// ==============================
+// AI TỔNG HỢP CHI TIẾT (NÂNG CẤP PRO)
+// ==============================
+function buildAISummary() {
+  const listEl = document.getElementById("summaryList");
+  summaryText = "";
+  listEl.innerHTML = "";
+
+  if (allArticles.length === 0) {
+    listEl.innerHTML = "<li>Chưa có dữ liệu.</li>";
+    return;
+  }
+
+  const sorted = [...allArticles].sort((a,b)=>b.date - a.date).slice(0,40);
+
+  // Nhóm theo địa phương
+  const groups = {};
+  for(const a of sorted){
+    const key = a.locLabel || "Khác";
+    if(!groups[key]) groups[key]=[];
+    groups[key].push(a);
+  }
+
+  const PRIOR = ["Hương Khê","Kỳ Anh","Đức Thọ","Hồng Lĩnh","Thạch Hà","Hà Tĩnh"];
+
+  let out = [];
+  out.push("📊 *Tổng hợp thiên tai - thời tiết 24h qua (AI)*");
+
+  // Ưu tiên phân tích Hà Tĩnh theo huyện
+  for(const loc of PRIOR){
+    const arr = groups[loc];
+    if(!arr) continue;
+
+    const severe = arr.filter(a=>a.score>=5);
+    const max = Math.max(...arr.map(a=>a.score));
+
+    out.push(
+      `\n📍 **${loc}**` +
+      `\n• Tin ghi nhận: ${arr.length}` +
+      `\n• Tin nguy hiểm (>=5 điểm): ${severe.length}` +
+      `\n• Mức rủi ro cao nhất: ${max}/10` +
+      `\n• Tiêu điểm: "${arr[0].title.slice(0,80)}..."`
+    );
+  }
+
+  // Tổng quan miền Trung
+  const MT = sorted.filter(a =>
+    ["nghe-an","quang-binh","quang-tri","thua-thien-hue","quang-nam","mien-trung"]
+      .includes(a.locKey)
+  );
+
+  if(MT.length){
+    const max = Math.max(...MT.map(a=>a.score));
+    out.push(
+      `\n⛰️ **Miền Trung – Tổng quan**`+
+      `\n• Tin ghi nhận: ${MT.length}`+
+      `\n• Rủi ro cao nhất: ${max}/10`+
+      `\n• Tiêu điểm: "${MT[0].title.slice(0,80)}..."`
+    );
+  }
+
+  // Dự báo 24h tới
+  const maxScore = Math.max(...sorted.map(a=>a.score));
+  let forecast="";
+
+  if(maxScore>=8){
+    forecast="Nguy cơ rất cao: mưa đặc biệt to, gió mạnh, lũ quét và ngập sâu tại một số huyện Hà Tĩnh và Bắc Trung Bộ.";
+  } else if(maxScore>=5){
+    forecast="Nguy cơ trung bình: mưa to cục bộ, khả năng xuất hiện lũ nhỏ và ngập ở vùng trũng.";
+  } else {
+    forecast="Nguy cơ thấp: thời tiết ổn định, chỉ có mưa rào nhẹ rải rác.";
+  }
+
+  out.push(`\n🧭 **Dự báo 24h tới:**\n• ${forecast}`);
+
+  // Khuyến nghị
+  out.push(
+    `\n📝 **Khuyến nghị:**`+
+    `\n• Theo dõi mực nước sông và bản tin KTTV.`+
+    `\n• Hạn chế đi lại ban đêm nếu có mưa lớn.`+
+    `\n• Kiểm tra thoát nước xung quanh nhà.`,
+  );
+
+  // Render UI
+  listEl.innerHTML="";
+  out.forEach(line=>{
+    const li=document.createElement("li");
+    li.textContent=line.replace(/\*\*/g,"");
+    listEl.appendChild(li);
+  });
+
+  summaryText = out.join("\n");
+}
+
+// ==============================
+// GIỌNG ĐỌC AI (WEB SPEECH)
+// ==============================
+function speakSummary(){
+  if(!("speechSynthesis" in window)){
+    alert("Trình duyệt không hỗ trợ đọc giọng.");
+    return;
+  }
+  if(!summaryText){ buildAISummary(); }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(summaryText);
+  u.lang="vi-VN";
+  u.rate=1.0;
+  window.speechSynthesis.speak(u);
+}
+
+// ==============================
+// BANNER TIN BÃO / LŨ
+// ==============================
+function updateStormBanner(){
+  const banner=document.getElementById("stormBanner");
+  const txt=document.getElementById("stormText");
+  const btn=document.getElementById("btnStormJump");
+
+  if(stormArticles.length===0){
+    banner.classList.add("hidden");
+    return;
+  }
+  banner.classList.remove("hidden");
+
+  const first = stormArticles[0];
+  const id = first.dataset.articleId;
+  const art = allArticles.find(a=>String(a.id)==String(id));
+
+  txt.textContent = 
+    `Có ${stormArticles.length} tin bão/lũ hoặc nguy cơ cao. Nổi bật: "${art.title.slice(0,70)}..."`;
+
+  btn.onclick =()=>{
+    first.scrollIntoView({behavior:"smooth"});
+    first.style.outline="3px solid #ef4444";
+    setTimeout(()=>first.style.outline="none",2500);
+  };
+}
+
+// ==============================
+// CHATBOT MINI AI – TRẢ LỜI TỰ ĐỘNG
+// ==============================
+function appendChatMsg(msg, who){
+  const box = document.getElementById("chatBody");
+  const div = document.createElement("div");
+  div.className = "chat-msg " + who;
+  const span=document.createElement("span");
+  span.textContent=msg;
+  div.appendChild(span);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function answerChat(q){
+  const text=q.toLowerCase();
+
+  if(allArticles.length===0)
+    return "Dữ liệu đang tải, vui lòng thử lại sau ít phút.";
+
+  // Hỏi tổng hợp
+  if(text.includes("tổng hợp")||text.includes("tóm tắt")){
+    buildAISummary();
+    return summaryText;
+  }
+
+  // Tìm địa phương
+  let loc=null;
+  for(const r of LOCATION_RULES){
+    for(const p of r.patterns){
+      if(text.includes(p)){ loc=r; break; }
+    }
+    if(loc) break;
+  }
+
+  const rainKey=["mưa","mưa lớn","thời tiết"];
+  const floodKey=["lũ","lụt","ngập"];
+  const stormKey=["bão","áp thấp"];
+
+  if(loc && (rainKey.some(k=>text.includes(k)) || 
+             floodKey.some(k=>text.includes(k)) ||
+             stormKey.some(k=>text.includes(k)))){
+
+    const rel = allArticles
+      .filter(a=>a.locKey===loc.key)
+      .sort((a,b)=>b.date-a.date)
+      .slice(0,8);
+
+    if(rel.length===0)
+      return `Không thấy tin đáng chú ý tại ${loc.label} trong dữ liệu mới nhất.`;
+
+    const severe = rel.filter(a=>a.score>=5);
+    let msg = `Khu vực ${loc.label} có ${rel.length} tin thời tiết/thiên tai. `;
+
+    if(severe.length){
+      msg += `Trong đó ${severe.length} tin ở mức nguy cơ trung bình → cao. `;
+      msg += "Tiêu điểm: " + severe.slice(0,2).map(a=>`"${a.title}"`).join("; ");
+    } else {
+      msg += "Hầu hết ở mức nguy cơ thấp. Tin nổi bật: ";
+      msg += rel.slice(0,2).map(a=>`"${a.title}"`).join("; ");
+    }
+    return msg;
+  }
+
+  // Hỏi về bão nói chung
+  if(stormKey.some(k=>text.includes(k))){
+    const storms = allArticles.filter(a=>a.isStorm||a.score>=7)
+      .sort((a,b)=>b.date-a.date).slice(0,5);
+    if(storms.length===0) return "Hiện chưa có tin bão nổi bật trong dữ liệu.";
+    return "Tin bão mới nhất: " + storms.map(a=>a.title).join("; ");
+  }
+
+  return "Bạn có thể hỏi: 'Hương Khê có lũ không?', 'Tổng hợp 1 phút', 'Có tin bão mới không?'.";
+}
+
+function initChat(){
+  const toggle=document.getElementById("chatToggle");
+  const panel=document.getElementById("chatPanel");
+  const close=document.getElementById("chatClose");
+  const send=document.getElementById("chatSend");
+  const input=document.getElementById("chatInput");
+
+  toggle.onclick=()=>{ panel.style.display = panel.style.display==="flex"?"none":"flex"; };
+  close.onclick=()=>{ panel.style.display="none"; };
+
+  function sendMsg(){
+    const q=input.value.trim();
+    if(!q) return;
+    appendChatMsg(q,"me");
+    input.value="";
+    const res = answerChat(q);
+    appendChatMsg(res,"bot");
+  }
+
+  send.onclick=sendMsg;
+  input.addEventListener("keydown",e=>{
+    if(e.key==="Enter") sendMsg();
+  });
+
+  appendChatMsg("Xin chào! Tôi là trợ lý SafeRoute AI mini. Bạn có thể hỏi về bão, lũ, mưa hoặc yêu cầu tổng hợp 1 phút.", "bot");
+}
+
+// ==============================
+// KHỞI TẠO HỆ THỐNG
+// ==============================
+async function init(){
+  initDarkMode();
+  initSearchFilters();
+
+  allCards=[]; 
+  allArticles=[];
+  stormArticles=[];
+
+  await Promise.all([
+    loadGroup(FEED_HT,"newsHT","ht",12),
+    loadGroup(FEED_MT,"newsMT","mt",10),
+    loadGroup(FEED_VN,"newsVN","vn",8),
+    loadGroup(FEED_QT,"newsQT","qt",4)
+  ]);
+
+  buildAISummary();
+  updateStormBanner();
+  initChat();
+
+  document.getElementById("btnSummary").onclick = buildAISummary;
+  document.getElementById("btnSpeakSummary").onclick = speakSummary;
+}
+
+init();
+</script>
+
+</body>
+</html>
